@@ -103,3 +103,11 @@ def test_app_starts_from_yaml(tmp_path):
         config_overrides={"SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"},
     )
     assert app.config["OWNER_NAME"] == "Jane Doe"
+
+
+def test_system_name_is_optional_and_checked(tmp_path):
+    assert AppConfig.from_yaml(write_config(tmp_path)).SYSTEM_NAME == ""
+    assert AppConfig.from_yaml(write_config(tmp_path, SYSTEM_NAME="Jane (Booking)")).SYSTEM_NAME
+    for bad in ('Jane "Bot"', "Jane\nBcc: x@example.com"):
+        with pytest.raises(ValueError, match="does not match"):
+            AppConfig.from_yaml(write_config(tmp_path, SYSTEM_NAME=bad))

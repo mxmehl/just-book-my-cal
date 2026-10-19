@@ -45,6 +45,7 @@
     "EMAIL_BODY_BOOKER": { "type": "string", "minLength": 1 },
     "EMAIL_BODY_OWNER": { "type": "string", "minLength": 1 },
     "SYSTEM_EMAIL": { "type": "string", "format": "email" },
+    "SYSTEM_NAME": { "type": "string", "pattern": "^[^\\x00-\\x1f\\x7f\"]*$" },
     "SMTP_HOST": { "type": "string" },
     "SMTP_PORT": { "type": "integer", "minimum": 1, "maximum": 65535 },
     "SMTP_USER": { "type": "string" },

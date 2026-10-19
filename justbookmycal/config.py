@@ -105,6 +105,7 @@ class AppConfig:  # pylint: disable=too-few-public-methods
 
     # SMTP settings (SYSTEM_EMAIL is the sender and the ORGANIZER of invitations)
     SYSTEM_EMAIL: str = ""
+    SYSTEM_NAME: str = ""  # Name shown for SYSTEM_EMAIL (From and ORGANIZER); empty: OWNER_NAME
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""

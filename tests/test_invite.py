@@ -32,6 +32,7 @@ CFG = {
     "EMAIL_BODY_OWNER": (
         "{{ booker_email }} {{ status }}{% if admin_url %} {{ admin_url }}{% endif %}"
     ),
+    "SYSTEM_NAME": "",
     "SMTP_PORT": 587,
     "SMTP_USER": "",
     "SMTP_PASS": "",
@@ -364,3 +365,34 @@ def test_ics_filename_is_safe_and_readable(owner, expected):
 def test_ics_filename_changes_with_the_meeting_time():
     moved = make_booking(start=datetime(2026, 10, 21, 13, 30, tzinfo=UTC))  # 15:30 CEST
     assert invite.ics_filename(CFG, moved) == "Meeting-with-MaxMehl-2026-10-21-1530.ics"
+
+
+def test_system_name_is_used_for_sender_and_organizer():
+    cfg = {**CFG, "SYSTEM_NAME": "Max Mehl (Booking)"}
+    [booker_mail, owner_mail] = build_with(cfg, make_booking())
+    # Parentheses are special characters in a mail header, so the name is correctly quoted
+    assert str(booker_mail["From"]) == '"Max Mehl (Booking)" <noreply@example.com>'
+    assert str(owner_mail["From"]) == '"Max Mehl (Booking)" <noreply@example.com>'
+    part = next(p for p in booker_mail.walk() if p.get_content_type() == "text/calendar")
+    event = event_of(part.get_payload(decode=True))
+    assert event["ORGANIZER"].params["CN"] == "Max Mehl (Booking)"
+    # Only the sender changes: the owner is still called by their own name as attendee and in texts
+    assert {a.params["CN"] for a in event["ATTENDEE"]} == {"Max Mehl", "Jane Doe"}
+    assert event["SUMMARY"] == "Jane Doe / Max Mehl (30 min)"  # {{ owner_name }} is unchanged
+
+
+def test_system_name_defaults_to_the_owner_name():
+    [mail, _] = build_with({**CFG, "SYSTEM_NAME": ""}, make_booking())
+    assert str(mail["From"]) == "Max Mehl <noreply@example.com>"
+
+
+def build_with(cfg: dict, booking: Booking):
+    """Like build(), but with a custom config."""
+    sent = []
+    original = invite._send
+    invite._send = lambda _cfg, messages: sent.extend(messages) or True  # type: ignore[assignment]
+    try:
+        assert invite.send_invites(cfg, booking, invite.METHOD_REQUEST, NOW)
+    finally:
+        invite._send = original
+    return sent

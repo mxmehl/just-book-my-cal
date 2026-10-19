@@ -63,6 +63,11 @@ def _context(cfg: Mapping[str, Any], booking: Booking, method: str) -> dict[str,
     }
 
 
+def system_name(cfg: Mapping[str, Any]) -> str:
+    """Name shown for the system address: SYSTEM_NAME, or the owner's name if not set."""
+    return cfg["SYSTEM_NAME"] or cfg["OWNER_NAME"]
+
+
 def _one_line(text: str) -> str:
     """Collapse whitespace, so that a template cannot break a header or a SUMMARY."""
     return " ".join(text.split())
@@ -117,7 +122,7 @@ def build_ics(cfg: Mapping[str, Any], booking: Booking, method: str, now: dateti
     event.add("transp", "OPAQUE")
 
     organizer = icalendar.vCalAddress(f"mailto:{cfg['SYSTEM_EMAIL']}")
-    organizer.params["CN"] = cfg["OWNER_NAME"]
+    organizer.params["CN"] = system_name(cfg)
     event.add("organizer", organizer, encode=False)
     for name, email in ((cfg["OWNER_NAME"], cfg["OWNER_EMAIL"]), (booking.name, booking.email)):
         attendee = icalendar.vCalAddress(f"mailto:{email}")
@@ -157,7 +162,7 @@ def _message(  # noqa: PLR0913
     system_domain = cfg["SYSTEM_EMAIL"].rpartition("@")[2]
 
     msg = EmailMessage()
-    msg["From"] = Address(cfg["OWNER_NAME"], addr_spec=cfg["SYSTEM_EMAIL"])
+    msg["From"] = Address(system_name(cfg), addr_spec=cfg["SYSTEM_EMAIL"])
     msg["To"] = Address(recipient[0], addr_spec=recipient[1])
     msg["Subject"] = f"{prefix}: {title}"
     msg["Date"] = formatdate()

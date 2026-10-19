@@ -83,6 +83,9 @@ REMINDER_MINUTES: 15
 # REQUIRED. Sender and ORGANIZER of the invitations, e.g. a noreply address. You and the booker are
 # attendees. Using a system address instead of your own makes Outlook show a normal invitation.
 SYSTEM_EMAIL: "noreply@example.com"
+# Name shown next to SYSTEM_EMAIL, both as sender of the mails and as organizer of the event.
+# Default: "" (OWNER_NAME is used)
+SYSTEM_NAME: "Jane Doe (Booking)"
 # SMTP server for sending the invitations. Default: "" (no mail is sent)
 SMTP_HOST: "smtp.example.com"
 # SMTP port. Default: 587
