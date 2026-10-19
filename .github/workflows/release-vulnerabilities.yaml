@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2025 Max Mehl <https://mehl.mx>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+name: Vulnerability Check of Latest Release/Tag
+
+on:
+  workflow_dispatch:  # allow to trigger manually
+  schedule:
+    - cron: "35 9 * * 1"  # run a check once a week
+
+permissions:
+  contents: read
+
+jobs:
+  osv-check:
+    runs-on: ubuntu-latest
+    if: github.repository == 'mxmehl/just-book-my-cal'
+    steps:
+      - uses: mxmehl/latest-release-vulnerability-status@cbed5babdd804ef28567bcddf51e0a238be73c8b # v1.3.0
