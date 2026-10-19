@@ -4,7 +4,7 @@
 
 [project]
 name = "justbookmycal"
-version = "0.1.3"
+version = "0.1.4"
 description = "Simple, self-hostable booking page: let others book meetings in the free slots of your ICS calendar feed."
 authors = [{ name = "Max Mehl", email = "mail@mehl.mx" }]
 requires-python = ">=3.10,<4"
