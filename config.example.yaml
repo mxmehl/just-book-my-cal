@@ -10,7 +10,9 @@
 # SQLAlchemy database URI; the database only contains bookings. Default: justbookmycal.db in the
 # directory the app is started from. Protect the file: it contains booker names and email addresses.
 # DATABASE_URI: "sqlite:////absolute/path/to/justbookmycal.db"
-# REQUIRED. Secret for session cookies and CSRF tokens, at least 32 characters.
+# REQUIRED. Secret for session cookies, CSRF tokens and the private manage/admin links. At least 32
+# characters. Do not change it while there are upcoming meetings: the links in later mails for them
+# would no longer match.
 # Generate one with: python3 -c "import secrets; print(secrets.token_urlsafe(48))"
 SECRET_KEY: ""
 # Number of reverse proxies in front of the app (ProxyFix), so that rate limiting sees the real
@@ -73,8 +75,7 @@ REMINDER_MINUTES: 15
 # EVENT_TITLE: "{{ booker_name }} / {{ owner_name }} ({{ duration }} min)"
 # EVENT_DESCRIPTION: "{% if booker_message %}{{ booker_message }}\n\n{% endif %}Join: {{ meeting_url }}"
 # Jinja2 templates for the text of the emails. Same variables as above, plus manage_url (booker's
-# mail) or admin_url (your mail). The links are only known for the first mail and when that side
-# changes the meeting, so check with {% if manage_url %} / {% if admin_url %}.
+# mail) or admin_url (your mail). Both are available in every mail, also in updates.
 # EMAIL_BODY_BOOKER: "..."
 # EMAIL_BODY_OWNER: "..."
 

@@ -33,7 +33,7 @@ from wtforms.validators import DataRequired, Email, Length, Regexp
 from . import availability, invite
 from .availability import FeedError
 from .extensions import db, limiter
-from .models import STATUS_CANCELLED, STATUS_CONFIRMED, Booking, hash_token, new_token
+from .models import STATUS_CANCELLED, STATUS_CONFIRMED, Booking, derive_token, hash_token
 
 bp = Blueprint("main", __name__)
 # Every POST (booking, rescheduling, cancelling) is rate limited per client IP
@@ -61,7 +61,11 @@ class BookingForm(FlaskForm):
         ],
     )
     email = EmailField("Your email address", validators=[DataRequired(), Email(), Length(max=320)])
-    message = TextAreaField("What is it about? (optional)", validators=[Length(max=2000)])
+    message = TextAreaField(
+        "What is this about?",
+        description="Please describe the reason and goal of the meeting",
+        validators=[Length(max=2000)],
+    )
     website = StringField("Leave this field empty")  # honeypot: humans never see it
 
 
@@ -151,18 +155,21 @@ def _is_open(booking: Booking, now: datetime) -> bool:
     return not booking.cancelled and booking.end > now
 
 
-def _notify(
-    booking: Booking,
-    method: str,
-    now: datetime,
-    manage_url: str | None = None,
-    admin_url: str | None = None,
-) -> None:
-    """Send the invitations and tell the user how it went."""
+def _links(uid: str) -> tuple[str, str]:
+    """The private links (booker's manage page, owner's admin page) of a booking."""
+    secret = current_app.config["SECRET_KEY"]
+    manage_url = url_for("main.manage", token=derive_token(secret, uid, "manage"), _external=True)
+    admin_url = url_for("main.admin", token=derive_token(secret, uid, "admin"), _external=True)
+    return manage_url, admin_url
+
+
+def _notify(booking: Booking, method: str, now: datetime) -> None:
+    """Send the invitations, each side with its own private link, and tell the user how it went."""
+    manage_url, admin_url = _links(booking.uid)
     if invite.send_invites(current_app.config, booking, method, now, manage_url, admin_url):
         flash("Done. The calendar invitation was sent by email to both of you.", "ok")
         return
-    # The links exist only in the mails. If those fail, the owner's log is the only place left.
+    # If the mails fail, the owner would not learn the admin link: the log is the only place left.
     logging.error("Mails for booking %s failed. Admin link: %s", booking.uid, admin_url)
     flash(
         "The change is saved, but the email with the invitation could not be sent. "
@@ -171,22 +178,20 @@ def _notify(
     )
 
 
-def _reschedule(
-    booking: Booking, start: datetime, duration: int, now: datetime, **links: str | None
-) -> None:
+def _reschedule(booking: Booking, start: datetime, duration: int, now: datetime) -> None:
     """Move a booking. Same UID, higher SEQUENCE: calendars update the entry instead of adding."""
     booking.start, booking.duration = start, duration
     booking.sequence += 1
     db.session.commit()
-    _notify(booking, invite.METHOD_REQUEST, now, **links)
+    _notify(booking, invite.METHOD_REQUEST, now)
 
 
-def _cancel(booking: Booking, now: datetime, **links: str | None) -> None:
+def _cancel(booking: Booking, now: datetime) -> None:
     """Cancel a booking; this frees the slot."""
     booking.status = STATUS_CANCELLED
     booking.sequence += 1
     db.session.commit()
-    _notify(booking, invite.METHOD_CANCEL, now, **links)
+    _notify(booking, invite.METHOD_CANCEL, now)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -255,27 +260,25 @@ def book() -> Reply:
         flash("There are already enough upcoming meetings booked with this email address.", "error")
         return _render_index(form, duration, 429)
 
-    manage_token, admin_token = new_token(), new_token()
     domain = cfg["SYSTEM_EMAIL"].rpartition("@")[2] or "justbookmycal"
     name = (form.name.data or "").strip()
+    uid = f"{uuid.uuid4()}@{domain}"
     booking = Booking(
-        uid=f"{uuid.uuid4()}@{domain}",
+        uid=uid,
         start=start,
         duration=duration,
         name=name,
         email=email,
         message=(form.message.data or "").replace("\r\n", "\n").strip(),
         room=_make_room(name, start),
-        booker_token_hash=hash_token(manage_token),
-        admin_token_hash=hash_token(admin_token),
+        booker_token_hash=hash_token(derive_token(cfg["SECRET_KEY"], uid, "manage")),
+        admin_token_hash=hash_token(derive_token(cfg["SECRET_KEY"], uid, "admin")),
     )
     db.session.add(booking)
     db.session.commit()
 
-    manage_url = url_for("main.manage", token=manage_token, _external=True)
-    admin_url = url_for("main.admin", token=admin_token, _external=True)
-    _notify(booking, invite.METHOD_REQUEST, now, manage_url, admin_url)
-    return redirect(manage_url)
+    _notify(booking, invite.METHOD_REQUEST, now)
+    return redirect(_links(uid)[0])
 
 
 # ---------------------------------------------------------------------------------------------
@@ -320,14 +323,14 @@ def manage_post(token: str) -> Reply:
         flash("This meeting can no longer be changed.", "error")
     elif action == "cancel":
         if request.form.get("confirm"):
-            _cancel(booking, now, manage_url=url)
+            _cancel(booking, now)
         else:
             flash("Please tick the box to confirm the cancellation.", "error")
     elif action == "reschedule":
         start = _parse_slot(request.form.get("slot", ""))
         slots = availability.free_slots(cfg, booking.duration, now, exclude=booking)
         if start is not None and start in slots:
-            _reschedule(booking, start, booking.duration, now, manage_url=url)
+            _reschedule(booking, start, booking.duration, now)
         else:
             flash("Sorry, that time is not available. Please pick another one.", "error")
     else:
@@ -435,7 +438,7 @@ def admin_post(token: str) -> Reply:
         flash("This meeting can no longer be changed.", "error")
     elif action == "cancel":
         if request.form.get("confirm"):
-            _cancel(booking, now, admin_url=url)
+            _cancel(booking, now)
         else:
             flash("Please tick the box to confirm the cancellation.", "error")
     elif action == "reschedule":
@@ -448,7 +451,7 @@ def admin_post(token: str) -> Reply:
         conflicts = _conflicts(booking, start, duration)
         if conflicts and not request.form.get("confirm"):
             return _render_admin(booking, values, conflicts, 409)
-        _reschedule(booking, start, duration, now, admin_url=url)
+        _reschedule(booking, start, duration, now)
     else:
         abort(400)
     return redirect(url)

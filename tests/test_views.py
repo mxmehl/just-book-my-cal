@@ -371,3 +371,28 @@ def test_unknown_page_gets_the_error_page(client):
 
 def test_app_fixture_is_isolated_between_tests(app: Flask):
     assert bookings() == []
+
+
+def test_derived_tokens_are_stable_distinct_and_depend_on_the_secret():
+    from justbookmycal.models import derive_token
+
+    manage = derive_token("s" * 32, "uid-1@example.com", "manage")
+    assert manage == derive_token("s" * 32, "uid-1@example.com", "manage")
+    assert manage != derive_token("s" * 32, "uid-1@example.com", "admin")
+    assert manage != derive_token("s" * 32, "uid-2@example.com", "manage")
+    assert manage != derive_token("t" * 32, "uid-1@example.com", "manage")
+    assert re.fullmatch(r"[A-Za-z0-9_-]{43}", manage)  # 256 bits, URL-safe
+
+
+def test_changing_the_secret_key_breaks_later_links_but_not_sent_ones(app, client, outbox):
+    book(client)
+    link = links(outbox)["manage"]
+    old_secret = app.config["SECRET_KEY"]
+    app.config["SECRET_KEY"] = "another-secret-key-0123456789abcdef"
+    assert client.get(link).status_code == 200  # looked up by the stored hash
+    outbox.clear()
+    manage_post = client.post(link, data={"action": "reschedule", "slot": slot_at(20, 8, 0)})
+    assert manage_post.status_code == 302
+    assert links(outbox)["manage"] != link  # derived from the new secret: does not match anymore
+    assert client.get(links(outbox)["manage"]).status_code == 404
+    app.config["SECRET_KEY"] = old_secret

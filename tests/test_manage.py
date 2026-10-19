@@ -139,8 +139,8 @@ def test_booker_reschedules_into_a_free_slot(client, booked, outbox):
         assert event["SEQUENCE"] == 1
         assert event.start == datetime(2026, 10, 20, 8, 0, tzinfo=UTC)
     assert all(m["Subject"].startswith("Updated invitation: ") for m in outbox)
-    # The booker acted, so only the booker's mail has a link
-    assert links(outbox) == {"manage": booked.manage}
+    # Both mails carry their own link, although only the booker acted
+    assert links(outbox) == {"manage": booked.manage, "admin": booked.admin}
     # The old time is free again, the new one is taken
     offered = slots_of(client.get("/?duration=30"))
     assert booked.slot in offered
@@ -312,8 +312,8 @@ def test_owner_can_reschedule_outside_the_rules(client, booked, outbox):
         assert event["SEQUENCE"] == 1
         assert event.end - event.start == timedelta(minutes=45)
     assert len(outbox) == 2
-    # The owner acted, so only the owner's mail has a link
-    assert links(outbox) == {"admin": booked.admin}
+    # Both mails carry their own link, although only the owner acted
+    assert links(outbox) == {"manage": booked.manage, "admin": booked.admin}
 
 
 def test_times_are_taken_in_the_owners_time_zone(client, booked):
@@ -386,7 +386,7 @@ def test_owner_cancels(client, booked, outbox):
     client.post(booked.admin, data={"action": "cancel", "confirm": "on"})
     assert only_booking().status == "cancelled"
     assert [method for method, _ in calendars(outbox)] == ["CANCEL", "CANCEL"]
-    assert links(outbox) == {"admin": booked.admin}
+    assert links(outbox) == {"manage": booked.manage, "admin": booked.admin}
     assert "This meeting was cancelled." in client.get(booked.admin).text
     assert booked.slot in slots_of(client.get("/?duration=30"))
     # And the booker's link shows the same
@@ -422,3 +422,50 @@ def test_session_lock_is_released_between_requests(client, booked):
         assert client.get(booked.manage).status_code == 200
         assert client.get(booked.admin).status_code == 200
     db.session.remove()
+
+
+# ---------------------------------------------------------------------------------------------
+# Regression: update and cancellation mails carry the recipient's private link, whoever acted
+# ---------------------------------------------------------------------------------------------
+
+
+def body_of(mail: EmailMessage) -> str:
+    """Plain text body of a mail."""
+    return mail.get_body(("plain",)).get_content()
+
+
+def assert_each_side_has_exactly_its_own_link(outbox: list[EmailMessage], booked: Booked) -> None:
+    """Booker's mail: booker's link only. Owner's mail: admin link only."""
+    booker_mail, owner_mail = outbox
+    assert "jane@example.com" in booker_mail["To"].addresses[0].addr_spec
+    assert "If you need to change the date or cancel" in body_of(booker_mail)
+    assert booked.manage in body_of(booker_mail)
+    assert "/admin/" not in body_of(booker_mail)
+    assert "Reschedule freely or cancel with your private admin link" in body_of(owner_mail)
+    assert booked.admin in body_of(owner_mail)
+    assert "/manage/" not in body_of(owner_mail)
+
+
+def test_update_by_booker_still_gives_the_owner_the_admin_link(client, booked, outbox):
+    client.post(booked.manage, data={"action": "reschedule", "slot": slot_at(20, 8, 0)})
+    assert_each_side_has_exactly_its_own_link(outbox, booked)
+
+
+def test_update_by_owner_still_gives_the_booker_the_manage_link(client, booked, outbox):
+    admin_reschedule(client, booked)
+    assert_each_side_has_exactly_its_own_link(outbox, booked)
+
+
+def test_cancellation_by_booker_gives_both_their_links(client, booked, outbox):
+    client.post(booked.manage, data={"action": "cancel", "confirm": "on"})
+    assert_each_side_has_exactly_its_own_link(outbox, booked)
+
+
+def test_links_stay_the_same_over_several_changes(client, booked, outbox):
+    client.post(booked.manage, data={"action": "reschedule", "slot": slot_at(20, 8, 0)})
+    outbox.clear()
+    admin_reschedule(client, booked, date="2026-10-21")
+    assert_each_side_has_exactly_its_own_link(outbox, booked)
+    # The original links still work after all changes
+    assert client.get(booked.manage).status_code == 200
+    assert client.get(booked.admin).status_code == 200

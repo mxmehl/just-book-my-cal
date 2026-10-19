@@ -161,8 +161,7 @@ def send_invites(  # noqa: PLR0913
 ) -> bool:
     """Send the invitation (or update, or cancellation) to the booker and the owner.
 
-    Each side only gets its own private link, and only if it is known: the links are not stored,
-    so they can only go out with the first mail or when that side triggers the change.
+    Each side only gets its own private link, never the other side's.
 
     Args:
         cfg: app config

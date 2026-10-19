@@ -4,8 +4,9 @@
 
 """Database models."""
 
+import base64
 import hashlib
-import secrets
+import hmac
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -39,13 +40,26 @@ class UTCDateTime(TypeDecorator):
         return None if value is None else value.replace(tzinfo=timezone.utc)
 
 
-def new_token() -> str:
-    """Create a URL-safe secret token (32 random bytes)."""
-    return secrets.token_urlsafe(32)
+def derive_token(secret_key: str, uid: str, kind: str) -> str:
+    """Derive a private link token for a booking from the app secret.
+
+    The token is not stored; the same booking always yields the same token, so every mail can
+    carry the links again (also after the other side changed the meeting). Without SECRET_KEY, the
+    database alone does not reveal them. If SECRET_KEY changes, links already sent keep working
+    (they are looked up by their stored hash), but the links derived afterwards no longer match.
+
+    Args:
+        secret_key: the app's SECRET_KEY
+        uid: UID of the booking (random)
+        kind: "manage" (booker) or "admin" (owner): the two links of a booking differ
+    """
+    message = f"justbookmycal-link:{kind}:{uid}".encode()
+    digest = hmac.new(secret_key.encode(), message, hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(digest).rstrip(b"=").decode()
 
 
 def hash_token(token: str) -> str:
-    """Hash a token for storage and lookup. Only the hash is stored, never the token itself."""
+    """Hash a token for lookup. Only the hash is stored in the database, never the token."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 

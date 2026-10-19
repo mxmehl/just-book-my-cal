@@ -55,7 +55,7 @@ Flow: `GET /` → `availability.free_slots()` (feeds + DB bookings → `compute_
 - **Tests and the shared connection:** The in-memory test database uses one shared connection. Call `db.session.remove()` after querying in a test and before issuing requests (the `bookings()` helper does this), otherwise the next request fails with "cannot start a transaction within a transaction".
 - **Flash messages in tests:** Follow the redirect after each POST so the flash is consumed; otherwise the next page shows stale messages.
 - **Time in tests:** `availability.utcnow` and `availability._download` are replaced by the autouse `feed` fixture in `tests/conftest.py`; use `NOW` (Monday 2026-10-19 06:00 UTC) and `tests/fixtures/busy.ics`.
-- **Links in mails:** The booker/admin tokens are only known when a booking is created or when that side opens its page; only hashes are stored. That is why update mails contain a link only for the side that triggered the change.
+- **Links in mails:** The booker/admin tokens are derived from `SECRET_KEY` and the booking's UID (`models.derive_token`), so `views._links()` can rebuild both links at any time and every mail carries its recipient's link. Only hashes are stored, for lookup. Never put the other side's link into a mail.
 - **Macros need context:** Templates import `macros.html` `with context`, otherwise `timezone_name` is empty.
 - **mise:** In a fresh clone `mise` asks to trust `mise.toml` (`mise trust`) before `uv` shims work.
 
