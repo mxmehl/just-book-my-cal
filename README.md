@@ -5,6 +5,11 @@
 
 # just-book-my-cal
 
+[![Test suites](https://github.com/mxmehl/just-book-my-cal/actions/workflows/test.yaml/badge.svg)](https://github.com/mxmehl/just-book-my-cal/actions/workflows/test.yaml)
+[![REUSE status](https://api.reuse.software/badge/github.com/mxmehl/just-book-my-cal)](https://api.reuse.software/info/github.com/mxmehl/just-book-my-cal)
+[![The latest version can be found on PyPI.](https://img.shields.io/pypi/v/justbookmycal.svg)](https://pypi.org/project/justbookmycal/)
+[![Information on what versions of Python are supported can be found on PyPI.](https://img.shields.io/pypi/pyversions/justbookmycal.svg)](https://pypi.org/project/justbookmycal/)
+
 A small, self-hosted alternative to cal.com for one person: others book a meeting with you in the free times of your calendar. No accounts, no admin interface, no external services.
 
 - Reads your busy times from one or more public ICS feeds, including recurring events and moved or cancelled instances.
