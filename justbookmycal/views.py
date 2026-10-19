@@ -31,7 +31,7 @@ from werkzeug.wrappers import Response as WerkzeugResponse
 from wtforms import EmailField, IntegerField, StringField, TextAreaField
 from wtforms.validators import DataRequired, Email, Length, Regexp
 
-from . import availability, invite
+from . import __version__, availability, invite
 from .availability import FeedError
 from .extensions import db, limiter
 from .models import STATUS_CANCELLED, STATUS_CONFIRMED, Booking, derive_token, hash_token
@@ -77,6 +77,7 @@ def _inject() -> dict[str, str]:
     return {
         "owner_name": current_app.config["OWNER_NAME"],
         "timezone_name": current_app.config["TIMEZONE"],
+        "version": __version__,  # of the running release, from the package metadata
     }
 
 

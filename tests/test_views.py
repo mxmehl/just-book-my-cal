@@ -624,3 +624,25 @@ def test_pages_link_the_favicon_and_the_files_are_served(client):
 
 def test_error_pages_have_the_favicon_too(client):
     assert b"favicon.svg" in client.get("/nothing-here").data
+
+
+def test_footer_names_the_project_and_the_running_version(client, outbox):
+    from justbookmycal import __version__
+
+    book(client)
+    manage_page = client.get(links(outbox)["manage"])
+    for page in (client.get("/"), manage_page, client.get("/nothing-here")):
+        footer = BeautifulSoup(page.data, "html.parser").select_one("footer")
+        assert footer.text.split() == ["Powered", "by", "Just", "Book", "My", "Cal", __version__]
+        link = footer.select_one("a")
+        assert link["href"] == "https://github.com/mxmehl/just-book-my-cal"
+        assert "noopener" in link["rel"]
+        assert "noreferrer" in link["rel"]
+
+
+def test_version_comes_from_the_installed_package():
+    from importlib.metadata import version
+
+    from justbookmycal import __version__
+
+    assert __version__ == version("justbookmycal")

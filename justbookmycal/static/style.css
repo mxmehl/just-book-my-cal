@@ -30,15 +30,36 @@
 
 body {
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh; /* keeps the footer at the bottom on short pages */
   background: var(--bg);
   color: var(--fg);
   font: 1rem/1.5 system-ui, sans-serif;
 }
 
 main {
-  max-width: 40rem;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 42rem;
+  flex: 1 0 auto;
   margin: 0 auto;
-  padding: 1.5rem 1rem 4rem;
+  padding: 1.5rem 1rem 2rem;
+}
+
+footer {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 42rem;
+  margin: 0 auto;
+  padding: 0 1rem 1.5rem;
+}
+footer p {
+  margin: 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 a { color: var(--accent); }
