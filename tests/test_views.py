@@ -599,3 +599,28 @@ def test_link_of_existing_bookings_does_not_change_with_the_config(app, client, 
     app.config["MEETING_URL"] = "https://meet.example.com/new-room"
     client.get(links(outbox)["manage"])
     assert [b.meeting_url for b in bookings()] == [before.meeting_url]
+
+
+def test_pages_link_the_favicon_and_the_files_are_served(client):
+    soup = BeautifulSoup(client.get("/").data, "html.parser")
+    icons = {
+        (link["rel"][0], link.get("type")): link["href"] for link in soup.select("link[rel$=icon]")
+    }
+    assert icons[("icon", "image/svg+xml")] == "/static/favicon.svg"
+    assert icons[("icon", "image/png")] == "/static/favicon.png"
+    assert soup.select_one("link[rel=apple-touch-icon]")["href"] == "/static/favicon.png"
+
+    svg = client.get("/static/favicon.svg")
+    assert svg.status_code == 200
+    assert svg.mimetype == "image/svg+xml"
+    import xml.etree.ElementTree as ET
+
+    ET.fromstring(svg.data)  # noqa: S314  # our own file; this checks that it is well-formed
+    png = client.get("/static/favicon.png")
+    assert png.status_code == 200
+    assert png.mimetype == "image/png"
+    assert png.data.startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def test_error_pages_have_the_favicon_too(client):
+    assert b"favicon.svg" in client.get("/nothing-here").data

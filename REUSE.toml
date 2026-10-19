@@ -9,3 +9,8 @@ SPDX-License-Identifier = "CC0-1.0"
 path = ["tests/fixtures/**"]
 SPDX-FileCopyrightText = "2026 Max Mehl <https://mehl.mx>"
 SPDX-License-Identifier = "CC0-1.0"
+
+[[annotations]]
+path = ["justbookmycal/static/favicon.svg", "justbookmycal/static/favicon.png"]
+SPDX-FileCopyrightText = "2026 Max Mehl <https://mehl.mx>"
+SPDX-License-Identifier = "CC-BY-4.0"
