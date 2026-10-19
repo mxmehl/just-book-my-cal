@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.3...v0.1.4) (2026-10-19)
+
+
+### ⚙️ Chores
+
+* add version info to footer ([f07b4c5](https://github.com/mxmehl/just-book-my-cal/commit/f07b4c591380c1eed910afd807539241490f8958))
+
 ## [0.1.3](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.2...v0.1.3) (2026-10-19)
 
 
