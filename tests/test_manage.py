@@ -14,7 +14,7 @@ from flask.testing import FlaskClient
 
 from justbookmycal import availability
 from justbookmycal.extensions import db
-from justbookmycal.models import Booking
+from justbookmycal.models import Booking, hash_token
 
 from .conftest import FIXTURES, NOW, Feed
 from .test_views import book, bookings, links, slot_at, slots_of
@@ -132,7 +132,9 @@ def test_booker_reschedules_into_a_free_slot(client, booked, outbox):
     assert after.duration == before.duration
     assert after.sequence == 1
     assert after.uid == before.uid
-    assert after.room == before.room  # the video room stays valid in both calendars
+    assert (
+        after.meeting_url == before.meeting_url
+    )  # the same video link stays valid in both calendars
 
     # Both get an update of the same event
     assert len(outbox) == 2
@@ -290,6 +292,13 @@ def test_admin_page_shows_booker_and_message(client, booked):
     assert soup.select_one("#duration")["value"] == "30"
 
 
+def booking_of(booked: Booked) -> Booking:
+    """The booking a Booked belongs to (also if there are others)."""
+    admin_hash = hash_token(booked.admin.rsplit("/", 1)[1])
+    [booking] = [b for b in bookings() if b.admin_token_hash == admin_hash]
+    return booking
+
+
 def admin_reschedule(client, booked, **data):
     return client.post(
         booked.admin,
@@ -298,6 +307,7 @@ def admin_reschedule(client, booked, **data):
             "date": "2026-10-24",
             "time": "19:00",
             "duration": "45",
+            "meeting_url": booking_of(booked).meeting_url,
             **data,
         },
     )
@@ -494,3 +504,120 @@ def test_booker_can_move_into_a_later_week(client, booked, outbox):
     later = slots_of(client.get(booked.manage + "?week=2026-10-26"))[0]
     client.post(booked.manage, data={"action": "reschedule", "slot": later})
     assert only_booking().start.strftime("%Y-%m-%dT%H:%M:%SZ") == later
+
+
+# ---------------------------------------------------------------------------------------------
+# Owner edits the meeting link
+# ---------------------------------------------------------------------------------------------
+
+NEW_URL = "https://meet.example.com/special-room?lang=en"
+
+
+def test_admin_page_shows_and_prefills_the_meeting_link(client, booked):
+    soup = BeautifulSoup(client.get(booked.admin).data, "html.parser")
+    current = booking_of(booked).meeting_url
+    assert soup.select_one("#meeting_url")["value"] == current
+    assert soup.select_one("dd a")["href"] == current
+
+
+def test_owner_changes_only_the_meeting_link(client, booked, outbox):
+    old = booking_of(booked)
+    response = admin_reschedule(
+        client, booked, date="2026-10-19", time="09:00", duration="30", meeting_url=NEW_URL
+    )
+
+    assert response.status_code == 302
+    new = booking_of(booked)
+    assert new.meeting_url == NEW_URL
+    assert (new.start, new.duration) == (old.start, old.duration)  # time untouched
+    assert new.sequence == old.sequence + 1  # but calendars must update their entry
+    assert len(outbox) == 2
+    for method, calendar in calendars(outbox):
+        event = calendar.walk("VEVENT")[0]
+        assert method == "REQUEST"
+        assert event["LOCATION"] == NEW_URL
+        assert event["URL"] == NEW_URL
+        assert event["SEQUENCE"] == 1
+        assert NEW_URL in event["DESCRIPTION"]
+    assert all(NEW_URL in body_of(m) for m in outbox)
+    # The booker sees it, too
+    assert NEW_URL in client.get(booked.manage).text
+
+
+def test_changing_only_the_link_does_not_warn_about_conflicts(client, booked, outbox, feed: Feed):
+    feed.data = (FIXTURES / "busy.ics").read_bytes()  # Monday 14:00-15:00 is busy now...
+    availability._cache.clear()
+    book_time = booking_of(booked)
+    assert book_time.start.hour == 7  # ...but the meeting itself is at 09:00 Berlin
+    # Move it onto the busy time first, confirmed explicitly
+    admin_reschedule(client, booked, date="2026-10-19", time="14:30", duration="30", confirm="on")
+    outbox.clear()
+    response = admin_reschedule(
+        client, booked, date="2026-10-19", time="14:30", duration="30", meeting_url=NEW_URL
+    )
+    assert response.status_code == 302  # no 409: the time did not change
+    assert booking_of(booked).meeting_url == NEW_URL
+
+
+def test_changing_link_and_time_together(client, booked, outbox):
+    admin_reschedule(client, booked, meeting_url=NEW_URL)  # Saturday 19:00, 45 minutes
+    booking = booking_of(booked)
+    assert booking.meeting_url == NEW_URL
+    assert booking.start == datetime(2026, 10, 24, 17, 0, tzinfo=UTC)
+    assert booking.sequence == 1
+    assert len(outbox) == 2
+
+
+def test_nothing_changed_sends_nothing(client, booked, outbox):
+    old = booking_of(booked)
+    response = admin_reschedule(client, booked, date="2026-10-19", time="09:00", duration="30")
+    assert "Nothing to change" in flashes(client.get(response.headers["Location"]))[0]
+    assert booking_of(booked).sequence == old.sequence
+    assert outbox == []
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "",
+        "   ",
+        "not a url",
+        "meet.example.com/room",
+        "javascript:alert(1)",
+        "ftp://example.com/room",
+        "https://",
+        "https:///room",
+        "https://meet.example.com/with space",
+        "https://meet.example.com/new\nline",
+        "https://meet.example.com/" + "x" * 2100,
+    ],
+)
+def test_invalid_meeting_links_are_rejected(client, booked, outbox, bad):
+    old = booking_of(booked)
+    response = admin_reschedule(client, booked, meeting_url=bad)
+    assert response.status_code == 400
+    assert "meeting link" in response.text
+    assert booking_of(booked).meeting_url == old.meeting_url
+    assert booking_of(booked).sequence == 0
+    assert outbox == []
+
+
+def test_invalid_link_keeps_what_the_owner_typed(client, booked):
+    response = admin_reschedule(client, booked, meeting_url="not a url", time="18:30")
+    soup = BeautifulSoup(response.data, "html.parser")
+    assert soup.select_one("#meeting_url")["value"] == "not a url"
+    assert soup.select_one("#time")["value"] == "18:30"
+
+
+def test_surrounding_spaces_are_ignored(client, booked):
+    admin_reschedule(client, booked, meeting_url=f"  {NEW_URL}  ")
+    assert booking_of(booked).meeting_url == NEW_URL
+
+
+def test_the_booker_cannot_change_the_meeting_link(client, booked):
+    response = client.post(
+        booked.manage,
+        data={"action": "reschedule", "meeting_url": NEW_URL, "slot": slot_at(20, 8, 0)},
+    )
+    assert response.status_code == 302
+    assert booking_of(booked).meeting_url != NEW_URL

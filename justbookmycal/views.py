@@ -5,11 +5,13 @@
 """Routes: the public booking page and the private manage (booker) and admin (owner) pages."""
 
 import logging
+import re
 import secrets
 import uuid
 from collections.abc import Callable, Mapping
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from flask import (
@@ -42,6 +44,7 @@ ROOM_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789"  # no look-alikes (i, l, o, 0,
 NO_CONTROL_CHARS_OR_QUOTES = r'^[^\x00-\x1f\x7f"]+$'  # names end up in mail headers and ICS
 MIN_ADMIN_DURATION = 5
 MAX_ADMIN_DURATION = 480
+MAX_MEETING_URL_LENGTH = 2048  # as the database column
 SLOT_FORMAT = "%Y-%m-%dT%H:%M:%SZ"
 Reply = str | tuple[str, int] | WerkzeugResponse
 
@@ -169,12 +172,29 @@ def _valid_duration(value: int | None) -> int:
     return value
 
 
-def _make_room(booker_name: str, start: datetime) -> str:
-    """Name of the video room: OwnerName-BookerName-YYYYMMDD-random."""
-    suffix = "".join(secrets.choice(ROOM_ALPHABET) for _ in range(5))
-    day = start.astimezone(_tz())
-    owner = invite.ascii_alnum(current_app.config["OWNER_NAME"])
-    return f"{owner}-{invite.ascii_alnum(booker_name)}-{day:%Y%m%d}-{suffix}"
+def _new_meeting_url(booker_name: str, start: datetime) -> str:
+    """Video link of a new booking, rendered from the MEETING_URL template.
+
+    With the default template this is a room like OwnerName-BookerName-YYYYMMDD-random.
+    """
+    cfg = current_app.config
+    return invite.render(
+        cfg["MEETING_URL"],
+        owner=invite.ascii_alnum(cfg["OWNER_NAME"]),
+        booker=invite.ascii_alnum(booker_name),
+        date=f"{start.astimezone(_tz()):%Y%m%d}",
+        random="".join(secrets.choice(ROOM_ALPHABET) for _ in range(5)),
+    ).strip()
+
+
+def _parse_meeting_url(value: str) -> str | None:
+    """A video link entered by the owner: an http(s) URL with a host, no spaces; else None."""
+    value = value.strip()
+    if len(value) > MAX_MEETING_URL_LENGTH or not re.fullmatch(
+        r"https?://[^\s\x00-\x1f\x7f]+", value
+    ):
+        return None
+    return value if urlsplit(value).hostname else None
 
 
 def _booking_by_token(column: Any, token: str) -> Booking:  # noqa: ANN401
@@ -213,9 +233,20 @@ def _notify(booking: Booking, method: str, now: datetime) -> None:
     )
 
 
-def _reschedule(booking: Booking, start: datetime, duration: int, now: datetime) -> None:
-    """Move a booking. Same UID, higher SEQUENCE: calendars update the entry instead of adding."""
+def _reschedule(
+    booking: Booking,
+    start: datetime,
+    duration: int,
+    now: datetime,
+    meeting_url: str | None = None,
+) -> None:
+    """Change time, length and/or video link of a booking and send the update.
+
+    Same UID, higher SEQUENCE: calendars update the entry instead of adding a new one.
+    """
     booking.start, booking.duration = start, duration
+    if meeting_url:
+        booking.meeting_url = meeting_url
     booking.sequence += 1
     db.session.commit()
     _notify(booking, invite.METHOD_REQUEST, now)
@@ -307,7 +338,7 @@ def book() -> Reply:
         name=name,
         email=email,
         message=(form.message.data or "").replace("\r\n", "\n").strip(),
-        room=_make_room(name, start),
+        meeting_url=_new_meeting_url(name, start),
         booker_token_hash=hash_token(derive_token(cfg["SECRET_KEY"], uid, "manage")),
         admin_token_hash=hash_token(derive_token(cfg["SECRET_KEY"], uid, "admin")),
     )
@@ -345,7 +376,7 @@ def manage(token: str) -> Reply:
         token=token,
         can_change=can_change,
         week=week,
-        meeting_url=invite.meeting_url(cfg, booking),
+        meeting_url=booking.meeting_url,
         start_local=booking.start.astimezone(_tz()),
     )
 
@@ -404,7 +435,6 @@ def _render_admin(
     booking: Booking, values: dict[str, str], conflicts: list[str], status: int = 200
 ) -> Reply:
     """Render the owner's page."""
-    cfg = current_app.config
     return (
         render_template(
             "admin.html",
@@ -412,7 +442,7 @@ def _render_admin(
             can_change=_is_open(booking, availability.utcnow()),
             values=values,
             conflicts=conflicts,
-            meeting_url=invite.meeting_url(cfg, booking),
+            meeting_url=booking.meeting_url,
             start_local=booking.start.astimezone(_tz()),
         ),
         status,
@@ -426,6 +456,7 @@ def _current_values(booking: Booking) -> dict[str, str]:
         "date": f"{local:%Y-%m-%d}",
         "time": f"{local:%H:%M}",
         "duration": str(booking.duration),
+        "meeting_url": booking.meeting_url,
     }
 
 
@@ -483,16 +514,27 @@ def admin_post(token: str) -> Reply:
         else:
             flash("Please tick the box to confirm the cancellation.", "error")
     elif action == "reschedule":
-        values = {k: request.form.get(k, "") for k in ("date", "time", "duration")}
+        values = {k: request.form.get(k, "") for k in ("date", "time", "duration", "meeting_url")}
         parsed = _parse_admin_time(request.form)
         if parsed is None or parsed[0] <= now:
             flash("Please enter a valid time in the future and a length of 5-480 minutes.", "error")
             return _render_admin(booking, values, [], 400)
+        meeting_url = _parse_meeting_url(values["meeting_url"])
+        if meeting_url is None:
+            flash(
+                "Please enter the meeting link as a full http(s) address, without spaces.", "error"
+            )
+            return _render_admin(booking, values, [], 400)
         start, duration = parsed
-        conflicts = _conflicts(booking, start, duration)
+        time_changed = (start, duration) != (booking.start, booking.duration)
+        if not time_changed and meeting_url == booking.meeting_url:
+            flash("Nothing to change.", "error")
+            return redirect(url)
+        # Only a changed time can collide with something; editing just the link never warns
+        conflicts = _conflicts(booking, start, duration) if time_changed else []
         if conflicts and not request.form.get("confirm"):
             return _render_admin(booking, values, conflicts, 409)
-        _reschedule(booking, start, duration, now)
+        _reschedule(booking, start, duration, now, meeting_url)
     else:
         abort(400)
     return redirect(url)

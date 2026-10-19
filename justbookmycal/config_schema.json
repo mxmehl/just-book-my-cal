@@ -38,7 +38,7 @@
     "BUFFER_MINUTES_BEFORE": { "type": "integer", "minimum": 0 },
     "BUFFER_MINUTES_AFTER": { "type": "integer", "minimum": 0 },
     "MAX_UPCOMING_PER_EMAIL": { "type": "integer", "minimum": 1 },
-    "MEETING_BASE_URL": { "type": "string", "pattern": "^https?://" },
+    "MEETING_URL": { "type": "string", "pattern": "^https?://" },
     "REMINDER_MINUTES": { "type": ["integer", "null"], "minimum": 0 },
     "EVENT_TITLE": { "type": "string", "minLength": 1 },
     "EVENT_DESCRIPTION": { "type": "string" },

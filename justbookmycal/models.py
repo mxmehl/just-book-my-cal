@@ -76,7 +76,8 @@ class Booking(db.Model):  # type: ignore[ty:unsupported-base]
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
     message: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    room: Mapped[str] = mapped_column(String(100), nullable=False)
+    # The video link of this meeting: rendered from MEETING_URL when booked, editable by the owner
+    meeting_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default=STATUS_CONFIRMED)
     booker_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)

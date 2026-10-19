@@ -9,7 +9,7 @@ A small, self-hosted alternative to cal.com for one person: others book a meetin
 
 - Reads your busy times from one or more public ICS feeds, including recurring events and moved or cancelled instances.
 - Offers only slots that fit your rules: working hours per weekday (with breaks), the meeting lengths you choose (e.g. 15/30/60 minutes), minimum notice, booking horizon and buffers before and after your meetings.
-- Books instantly. You and the booker both get a calendar invitation (ICS) by email, with a video room (Jitsi) of its own for each meeting and an optional reminder.
+- Books instantly. You and the booker both get a calendar invitation (ICS) by email, with a video link for each meeting (a room of its own, or a fixed address) and an optional reminder.
 - Both sides get a private link to reschedule or cancel. The booker can only move the meeting into slots that are free under your rules. You can move it anywhere, with a warning if that overlaps with something.
 - Visitors see the times in their own time zone (a few lines of JavaScript; without them, the times are shown in your time zone). Free times are listed one calendar week at a time, with arrows to the previous and next week.
 - Abuse protection: rate limiting, a honeypot field, CSRF protection and a cap on upcoming meetings per email address.
@@ -56,7 +56,7 @@ Each mail contains a plain text part, the invitation as `text/calendar; method=â
 
 If the mail server rejects the mails, the booking is kept and the booker is told. Because the owner's admin link would be lost, it is written to the log in this case.
 
-Each meeting gets a video room like `https://meet.jit.si/MaxMehl-JaneDoe-20261020-k7p2x`. The random suffix makes it hard to guess, but the room name contains both names, so the operator of the video server can read them. Point `MEETING_BASE_URL` to your own Jitsi instance if that matters to you.
+Each meeting gets a video link rendered from the `MEETING_URL` template. The default creates a room like `https://meet.jit.si/MaxMehl-JaneDoe-20261020-k7p2x`: the random suffix makes it hard to guess, but the room name contains both names, so the operator of the video server can read them. Use your own Jitsi instance in the template if that matters to you, or a fixed address without variables to use one permanent room. You can change the link of a single meeting on its admin page, for example if the room needs to be different; the update is sent to both of you like a reschedule.
 
 ## Deployment
 

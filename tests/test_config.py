@@ -111,3 +111,41 @@ def test_system_name_is_optional_and_checked(tmp_path):
     for bad in ('Jane "Bot"', "Jane\nBcc: x@example.com"):
         with pytest.raises(ValueError, match="does not match"):
             AppConfig.from_yaml(write_config(tmp_path, SYSTEM_NAME=bad))
+
+
+def test_meeting_url_defaults_to_a_random_jitsi_room(tmp_path):
+    assert AppConfig.from_yaml(write_config(tmp_path)).MEETING_URL == (
+        "https://meet.jit.si/{{ owner }}-{{ booker }}-{{ date }}-{{ random }}"
+    )
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "https://meet.example.com/my-room",  # fixed address
+        "https://meet.example.com/{{ owner }}/{{ random }}",
+        "https://{{ owner | lower }}.example.com/{{ booker }}-{{ date }}",
+    ],
+)
+def test_meeting_url_accepts_templates_and_fixed_addresses(tmp_path, url):
+    assert url == AppConfig.from_yaml(write_config(tmp_path, MEETING_URL=url)).MEETING_URL
+
+
+@pytest.mark.parametrize(
+    ("url", "message"),
+    [
+        ("meet.example.com/room", "does not match"),  # no scheme
+        ("javascript:alert(1)", "does not match"),
+        ("https://meet.example.com/{{ owner", "not a valid Jinja2 template"),
+        ("https://meet.example.com/my room", "without spaces"),
+        ("https://", "without spaces"),
+    ],
+)
+def test_meeting_url_is_checked(tmp_path, url, message):
+    with pytest.raises(ValueError, match=message):
+        AppConfig.from_yaml(write_config(tmp_path, MEETING_URL=url))
+
+
+def test_old_meeting_base_url_setting_is_rejected(tmp_path):
+    with pytest.raises(ValueError, match="MEETING_BASE_URL"):
+        AppConfig.from_yaml(write_config(tmp_path, MEETING_BASE_URL="https://meet.jit.si/"))

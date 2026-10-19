@@ -153,7 +153,9 @@ def test_booking_is_saved_and_both_get_an_invitation(client, outbox):
     assert booking.message == "Let's talk about the project"
     assert (booking.sequence, booking.status) == (0, "confirmed")
     assert booking.uid.endswith("@example.com")
-    assert re.fullmatch(r"MaxMehl-JaneDoe-20261019-[a-z2-9]{5}", booking.room)
+    assert re.fullmatch(
+        r"https://meet\.jit\.si/MaxMehl-JaneDoe-20261019-[a-z2-9]{5}", booking.meeting_url
+    )
 
     assert sorted(str(m["To"]) for m in outbox) == [
         "Jane Doe <jane@example.com>",
@@ -258,7 +260,7 @@ def test_past_bookings_do_not_count_for_the_cap(app, client, outbox):
                 duration=30,
                 name="Jane",
                 email="jane@example.com",
-                room="r",
+                meeting_url="https://meet.example.com/r",
                 booker_token_hash=f"a{i}",
                 admin_token_hash=f"b{i}",
             )
@@ -549,3 +551,51 @@ def test_switching_the_duration_starts_at_the_default_week(client):
     soup = BeautifulSoup(client.get("/?duration=30&week=2026-10-26").data, "html.parser")
     href = soup.select_one("nav[aria-label='Meeting length'] a").get("href")
     assert "week" not in href
+
+
+# ---------------------------------------------------------------------------------------------
+# Video link
+# ---------------------------------------------------------------------------------------------
+
+
+def test_fixed_meeting_url_is_used_for_every_booking(app, client, outbox):
+    app.config["MEETING_URL"] = "https://meet.example.com/max-permanent-room"
+    book(client, slot_at(19, 7, 0))
+    book(client, slot_at(19, 8, 0), email="other@example.com", name="Sam Smith")
+    urls = {b.meeting_url for b in bookings()}
+    assert urls == {"https://meet.example.com/max-permanent-room"}
+    # It is what the invitation and the mails contain
+    for msg in outbox:
+        assert (
+            "https://meet.example.com/max-permanent-room" in msg.get_body(("plain",)).get_content()
+        )
+        part = next(p for p in msg.walk() if p.get_content_type() == "text/calendar")
+        assert b"LOCATION:https://meet.example.com/max-permanent-room" in part.get_payload(
+            decode=True
+        )
+
+
+def test_template_variables_for_the_meeting_url(app, client, outbox):
+    app.config["MEETING_URL"] = (
+        "https://{{ owner | lower }}.example.com/{{ booker }}/{{ date }}/{{ random }}"
+    )
+    book(client, slot_at(19, 7, 0), name="zoë müller")
+    [booking] = bookings()
+    assert re.fullmatch(
+        r"https://maxmehl\.example\.com/ZoeMuller/20261019/[a-z2-9]{5}", booking.meeting_url
+    )
+
+
+def test_every_booking_gets_its_own_random_room_by_default(client, outbox):
+    book(client, slot_at(19, 7, 0))
+    book(client, slot_at(19, 8, 0), email="other@example.com")
+    first, second = (b.meeting_url for b in bookings())
+    assert first != second
+
+
+def test_link_of_existing_bookings_does_not_change_with_the_config(app, client, outbox):
+    book(client)
+    [before] = bookings()
+    app.config["MEETING_URL"] = "https://meet.example.com/new-room"
+    client.get(links(outbox)["manage"])
+    assert [b.meeting_url for b in bookings()] == [before.meeting_url]

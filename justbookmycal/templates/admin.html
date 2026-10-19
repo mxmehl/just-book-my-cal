@@ -24,8 +24,8 @@
 {% if booking.cancelled %}
   <p>This meeting was cancelled.</p>
 {% elif can_change %}
-  <h2>Reschedule</h2>
-  <p class="note">Working hours and your calendar are not enforced here. Times are in {{ timezone_name }}.</p>
+  <h2>Change time or meeting link</h2>
+  <p class="note">Working hours and your calendar are not enforced here. Times are in {{ timezone_name }}. Every change sends an updated invitation to both of you.</p>
   <form method="post">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="action" value="reschedule">
@@ -41,14 +41,18 @@
       <label for="duration">Length in minutes</label>
       <input type="number" id="duration" name="duration" value="{{ values.duration }}" min="5" max="480" required>
     </div>
+    <div class="field">
+      <label for="meeting_url">Meeting link</label>
+      <input type="url" id="meeting_url" name="meeting_url" value="{{ values.meeting_url }}" maxlength="2048" required>
+    </div>
     {% if conflicts %}
       <div class="warning" role="alert">
         <p>This time overlaps with:</p>
         <ul>{% for c in conflicts %}<li>{{ c }}</li>{% endfor %}</ul>
-        <p><label><input type="checkbox" name="confirm" required> Reschedule anyway</label></p>
+        <p><label><input type="checkbox" name="confirm" required> Change anyway</label></p>
       </div>
     {% endif %}
-    <button type="submit">Reschedule</button>
+    <button type="submit">Save and send update</button>
   </form>
 
   <h2>Cancel the meeting</h2>

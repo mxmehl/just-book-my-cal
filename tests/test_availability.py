@@ -286,7 +286,7 @@ def test_free_slots_combine_feed_and_database(app, feed):
         duration=60,
         name="A",
         email="a@example.com",
-        room="r",
+        meeting_url="https://meet.example.com/r",
         booker_token_hash="1",
         admin_token_hash="2",
     )

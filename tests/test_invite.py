@@ -19,7 +19,6 @@ UTC = timezone.utc
 
 CFG = {
     **TEST_CONFIG,
-    "MEETING_BASE_URL": "https://meet.example.com/",
     "REMINDER_MINUTES": 15,
     "EVENT_TITLE": "{{ booker_name }} / {{ owner_name }} ({{ duration }} min)",
     "EVENT_DESCRIPTION": (
@@ -49,7 +48,7 @@ def make_booking(**changes) -> Booking:
         "name": "Jane Doe",
         "email": "jane@example.com",
         "message": "Let's talk about the project",
-        "room": "MaxMehl-JaneDoe-20261020-k7p2x",
+        "meeting_url": "https://meet.example.com/MaxMehl-JaneDoe-20261020-k7p2x",
         "booker_token_hash": "x",
         "admin_token_hash": "y",
     }

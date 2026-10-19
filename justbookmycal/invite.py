@@ -36,11 +36,6 @@ def render(template: str, **context: Any) -> str:  # noqa: ANN401
     return _env.from_string(template).render(**context)
 
 
-def meeting_url(cfg: Mapping[str, Any], booking: Booking) -> str:
-    """URL of the booking's video room."""
-    return cfg["MEETING_BASE_URL"].rstrip("/") + "/" + booking.room
-
-
 def _context(cfg: Mapping[str, Any], booking: Booking, method: str) -> dict[str, Any]:
     """Variables available in all templates."""
     if method == METHOD_CANCEL:
@@ -54,7 +49,7 @@ def _context(cfg: Mapping[str, Any], booking: Booking, method: str) -> dict[str,
         "owner_name": cfg["OWNER_NAME"],
         "owner_email": cfg["OWNER_EMAIL"],
         "duration": booking.duration,
-        "meeting_url": meeting_url(cfg, booking),
+        "meeting_url": booking.meeting_url,
         "start_local": booking.start.astimezone(ZoneInfo(cfg["TIMEZONE"])).strftime(
             "%A, %d %B %Y, %H:%M %Z"
         ),

@@ -6,6 +6,7 @@
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -17,6 +18,14 @@ from jsonschema import FormatChecker, validate
 from jsonschema.exceptions import ValidationError
 
 DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+# Variables of the MEETING_URL template, with an example of each (used to check the template)
+MEETING_URL_SAMPLE = {
+    "owner": "MaxMehl",
+    "booker": "JaneDoe",
+    "date": "20261020",
+    "random": "k7p2x",
+}
 
 DEFAULT_EVENT_TITLE = "{{ booker_name }} / {{ owner_name }} ({{ duration }} min)"
 DEFAULT_EVENT_DESCRIPTION = (
@@ -96,7 +105,7 @@ class AppConfig:  # pylint: disable=too-few-public-methods
     MAX_UPCOMING_PER_EMAIL: int = 2
 
     # Invitation
-    MEETING_BASE_URL: str = "https://meet.jit.si/"
+    MEETING_URL: str = "https://meet.jit.si/{{ owner }}-{{ booker }}-{{ date }}-{{ random }}"
     REMINDER_MINUTES: int | None = 15
     EVENT_TITLE: str = DEFAULT_EVENT_TITLE
     EVENT_DESCRIPTION: str = DEFAULT_EVENT_DESCRIPTION
@@ -146,6 +155,15 @@ class AppConfig:  # pylint: disable=too-few-public-methods
                     msg = f"WORKING_HOURS {day}: '{window}' must end after it starts"
                     raise ValueError(msg)
 
+        cls._validate_templates(cfg)
+
+    @classmethod
+    def _validate_templates(cls, cfg: dict) -> None:
+        """Check the Jinja2 templates: syntax, and that MEETING_URL gives a usable URL.
+
+        Raises:
+            ValueError: with a readable message if a template is invalid
+        """
         # Sandboxed: templates come from the config, but there is no reason to trust them blindly
         env = SandboxedEnvironment()
         for key in ("EVENT_TITLE", "EVENT_DESCRIPTION", "EMAIL_BODY_BOOKER", "EMAIL_BODY_OWNER"):
@@ -155,6 +173,16 @@ class AppConfig:  # pylint: disable=too-few-public-methods
                 except TemplateSyntaxError as e:
                     msg = f"{key} is not a valid Jinja2 template: {e}"
                     raise ValueError(msg) from None
+
+        if "MEETING_URL" in cfg:
+            try:
+                sample = env.from_string(cfg["MEETING_URL"]).render(**MEETING_URL_SAMPLE)
+            except TemplateSyntaxError as e:
+                msg = f"MEETING_URL is not a valid Jinja2 template: {e}"
+                raise ValueError(msg) from None
+            if not re.fullmatch(r"https?://[^\s\x00-\x1f\x7f]+", sample):
+                msg = f"MEETING_URL must result in a URL without spaces, but gives '{sample}'"
+                raise ValueError(msg)
 
     @classmethod
     def load_from_yaml(cls, yaml_path: str | Path) -> dict[str, Any]:

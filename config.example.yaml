@@ -64,9 +64,14 @@ BUFFER_MINUTES_AFTER: 0
 MAX_UPCOMING_PER_EMAIL: 2
 
 # --- Invitation --------------------------------------------------------------------------------
-# Every meeting gets its own room below this URL. Default: "https://meet.jit.si/"
-# Note that the room name contains both names, so the video server operator can see them.
-MEETING_BASE_URL: "https://meet.jit.si/"
+# Video link of the meetings, as a Jinja2 template. Available variables: owner and booker (their
+# names, letters and digits only), date (YYYYMMDD) and random (5 random characters). With the
+# default, every meeting gets its own hard-to-guess room. Note that such a room name contains both
+# names, so the operator of the video server can read them. Use a fixed address (no variables)
+# for one permanent room instead. You can change the link of a single meeting on its admin page.
+# Default: "https://meet.jit.si/{{ owner }}-{{ booker }}-{{ date }}-{{ random }}"
+MEETING_URL: "https://meet.jit.si/{{ owner }}-{{ booker }}-{{ date }}-{{ random }}"
+# MEETING_URL: "https://meet.example.com/my-room"
 # Reminder before the meeting, in minutes. Use null for no reminder. Default: 15
 REMINDER_MINUTES: 15
 # Jinja2 templates for the event title and description. Available variables: booker_name,
