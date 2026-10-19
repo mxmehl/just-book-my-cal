@@ -7,6 +7,7 @@
 import logging
 import smtplib
 import ssl
+import unicodedata
 from collections.abc import Mapping
 from datetime import datetime, timedelta
 from email.headerregistry import Address
@@ -65,6 +66,22 @@ def _context(cfg: Mapping[str, Any], booking: Booking, method: str) -> dict[str,
 def _one_line(text: str) -> str:
     """Collapse whitespace, so that a template cannot break a header or a SUMMARY."""
     return " ".join(text.split())
+
+
+def ascii_alnum(text: str, limit: int = 20) -> str:
+    """Letters and digits of a name, title-cased, ASCII only: "jane müller" -> "JaneMuller"."""
+    ascii_text = unicodedata.normalize("NFKD", text.title()).encode("ascii", "ignore").decode()
+    return "".join(c for c in ascii_text if c.isalnum())[:limit] or "Guest"
+
+
+def ics_filename(cfg: Mapping[str, Any], booking: Booking) -> str:
+    """File name for the calendar file, e.g. "Meeting-with-MaxMehl-2026-10-20-1000.ics".
+
+    Date and time are the owner's local time. Only letters, digits and hyphens, so it is safe in
+    headers and file systems.
+    """
+    local = booking.start.astimezone(ZoneInfo(cfg["TIMEZONE"]))
+    return f"Meeting-with-{ascii_alnum(cfg['OWNER_NAME'])}-{local:%Y-%m-%d-%H%M}.ics"
 
 
 def build_ics(cfg: Mapping[str, Any], booking: Booking, method: str, now: datetime) -> bytes:
@@ -147,7 +164,9 @@ def _message(  # noqa: PLR0913
     msg["Message-ID"] = make_msgid(domain=system_domain)
     msg.set_content(render(body_template, **context, **links))
     msg.add_alternative(ics.decode(), subtype="calendar", params={"method": method})
-    msg.add_attachment(ics, maintype="application", subtype="ics", filename="invite.ics")
+    msg.add_attachment(
+        ics, maintype="application", subtype="ics", filename=ics_filename(cfg, booking)
+    )
     return msg
 
 

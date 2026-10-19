@@ -6,7 +6,6 @@
 
 import logging
 import secrets
-import unicodedata
 import uuid
 from collections.abc import Mapping
 from datetime import date, datetime, time, timedelta, timezone
@@ -131,15 +130,10 @@ def _valid_duration(value: int | None) -> int:
 
 def _make_room(booker_name: str, start: datetime) -> str:
     """Name of the video room: OwnerName-BookerName-YYYYMMDD-random."""
-
-    def ascii_alnum(text: str) -> str:
-        ascii_text = unicodedata.normalize("NFKD", text.title()).encode("ascii", "ignore").decode()
-        return "".join(c for c in ascii_text if c.isalnum())[:20] or "Guest"
-
     suffix = "".join(secrets.choice(ROOM_ALPHABET) for _ in range(5))
     day = start.astimezone(_tz())
-    owner = ascii_alnum(current_app.config["OWNER_NAME"])
-    return f"{owner}-{ascii_alnum(booker_name)}-{day:%Y%m%d}-{suffix}"
+    owner = invite.ascii_alnum(current_app.config["OWNER_NAME"])
+    return f"{owner}-{invite.ascii_alnum(booker_name)}-{day:%Y%m%d}-{suffix}"
 
 
 def _booking_by_token(column: Any, token: str) -> Booking:  # noqa: ANN401
@@ -347,10 +341,11 @@ def manage_ics(token: str) -> Response:
     ics = invite.build_ics(
         current_app.config, booking, invite.METHOD_REQUEST, availability.utcnow()
     )
+    filename = invite.ics_filename(current_app.config, booking)
     return Response(
         ics,
         mimetype="text/calendar",
-        headers={"Content-Disposition": 'attachment; filename="invite.ics"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

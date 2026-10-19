@@ -111,7 +111,11 @@ def test_ics_download(client, booked):
     response = client.get(booked.manage + "/invite.ics")
     assert response.status_code == 200
     assert response.mimetype == "text/calendar"
-    assert "invite.ics" in response.headers["Content-Disposition"]
+    # The file is named after the owner and the meeting time (owner's time zone: 09:00 CEST)
+    assert (
+        'filename="Meeting-with-MaxMehl-2026-10-19-0900.ics"'
+        in response.headers["Content-Disposition"]
+    )
     calendar = icalendar.Calendar.from_ical(response.data)
     assert calendar["METHOD"] == "REQUEST"
     assert calendar.walk("VEVENT")[0]["UID"] == only_booking().uid

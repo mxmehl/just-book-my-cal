@@ -194,7 +194,7 @@ def test_mime_structure():
     assert calendar.get_content_type() == "text/calendar"
     assert calendar.get_param("method") == "REQUEST"
     assert attachment.get_content_type() == "application/ics"
-    assert attachment.get_filename() == "invite.ics"
+    assert attachment.get_filename() == "Meeting-with-MaxMehl-2026-10-20-1000.ics"
     # Both calendar parts carry the same invitation (line endings differ by transfer encoding)
     inline = calendar.get_payload(decode=True)
     assert attachment.get_payload(decode=True).replace(b"\r\n", b"\n") == inline.replace(
@@ -346,3 +346,21 @@ def test_missing_smtp_host_is_reported(caplog):
 def test_broken_template_does_not_raise(monkeypatch, caplog):
     cfg = {**CFG, "EMAIL_BODY_BOOKER": "{{ 1 / 0 }}"}
     assert not invite.send_invites(cfg, make_booking(), invite.METHOD_REQUEST, NOW)
+
+
+@pytest.mark.parametrize(
+    ("owner", "expected"),
+    [
+        ("Max Mehl", "Meeting-with-MaxMehl-2026-10-20-1000.ics"),
+        ("zoë müller-schmidt", "Meeting-with-ZoeMullerSchmidt-2026-10-20-1000.ics"),
+        ('Evil/../"Name"\r\n', "Meeting-with-EvilName-2026-10-20-1000.ics"),
+        ("日本語", "Meeting-with-Guest-2026-10-20-1000.ics"),
+    ],
+)
+def test_ics_filename_is_safe_and_readable(owner, expected):
+    assert invite.ics_filename({**CFG, "OWNER_NAME": owner}, make_booking()) == expected
+
+
+def test_ics_filename_changes_with_the_meeting_time():
+    moved = make_booking(start=datetime(2026, 10, 21, 13, 30, tzinfo=UTC))  # 15:30 CEST
+    assert invite.ics_filename(CFG, moved) == "Meeting-with-MaxMehl-2026-10-21-1530.ics"
