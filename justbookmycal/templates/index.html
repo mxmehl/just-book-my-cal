@@ -1,0 +1,36 @@
+{#
+  SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+  SPDX-License-Identifier: Apache-2.0
+#}
+{% extends "base.html" %}
+{% from "macros.html" import slot_picker, field with context %}
+{% block content %}
+<h1>Book a meeting with {{ owner_name }}</h1>
+
+<nav aria-label="Meeting length">
+  <ul class="durations">
+    {% for d in durations %}
+      <li><a href="{{ url_for('main.index', duration=d) }}"{% if d == duration %} aria-current="page"{% endif %}>{{ d }} minutes</a></li>
+    {% endfor %}
+  </ul>
+</nav>
+
+{% if days %}
+<form method="post" action="{{ url_for('main.book') }}">
+  {{ form.csrf_token }}
+  <input type="hidden" name="duration" value="{{ duration }}">
+  {{ slot_picker(days, "Pick a time") }}
+  {% for error in form.slot.errors %}<p class="field-error" role="alert">Please pick a time.</p>{% endfor %}
+
+  <h2>Your details</h2>
+  {{ field(form.name, maxlength=100, autocomplete="name") }}
+  {{ field(form.email, maxlength=320, autocomplete="email") }}
+  {{ field(form.message, rows=4, maxlength=2000) }}
+  <div class="hp" aria-hidden="true">{{ form.website.label }} {{ form.website(tabindex=-1, autocomplete="off") }}</div>
+
+  <button type="submit">Book {{ duration }} minutes</button>
+</form>
+{% else %}
+<p>There are no free times for the next {{ horizon_days }} days. Please check back later.</p>
+{% endif %}
+{% endblock %}

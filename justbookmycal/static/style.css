@@ -1,0 +1,110 @@
+/*
+ * SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+:root {
+  --fg: #1a1a1a;
+  --bg: #ffffff;
+  --muted: #595959;
+  --accent: #1b5fa8;
+  --danger: #a61b1b;
+  --border: #c4c4c4;
+  --warn-bg: #fff4d6;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #ececec;
+    --bg: #161616;
+    --muted: #b0b0b0;
+    --accent: #7db4f0;
+    --danger: #ff8a8a;
+    --border: #555555;
+    --warn-bg: #4a3d12;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 1rem/1.5 system-ui, sans-serif;
+}
+
+main {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+a { color: var(--accent); }
+.note { color: var(--muted); font-size: 0.9rem; }
+
+.flash { padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 0.4rem; }
+.flash.error { border-color: var(--danger); }
+
+.durations { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; }
+.durations a {
+  display: block;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 2rem;
+  text-decoration: none;
+}
+.durations a[aria-current="page"] { background: var(--accent); color: var(--bg); }
+
+fieldset { border: 0; padding: 0; margin: 1.5rem 0; }
+legend { font-size: 1.25rem; font-weight: 600; }
+.day h3 { margin: 1rem 0 0.4rem; font-size: 1rem; }
+.slots { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; padding: 0; margin: 0; }
+.slots li { position: relative; }
+.slots input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.slots label {
+  display: block;
+  padding: 0.4rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+.slots input:checked + label { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.slots input:focus-visible + label { outline: 3px solid var(--fg); outline-offset: 2px; }
+
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-weight: 600; margin-bottom: 0.2rem; }
+.field input, .field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.5rem;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+}
+.field-error { color: var(--danger); margin: 0.2rem 0 0; }
+
+button {
+  padding: 0.6rem 1.2rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--bg);
+  background: var(--accent);
+  border: 0;
+  border-radius: 0.4rem;
+  cursor: pointer;
+}
+button.danger { background: var(--danger); }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 3px solid var(--fg);
+  outline-offset: 2px;
+}
+
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.3rem 1rem; }
+dt { font-weight: 600; }
+dd { margin: 0; }
+.message { white-space: pre-wrap; }
+.warning { background: var(--warn-bg); padding: 0.75rem 1rem; border-radius: 0.4rem; margin-bottom: 1rem; }
+
+/* Honeypot: out of sight for people, tempting for bots */
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }

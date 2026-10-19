@@ -1,0 +1,64 @@
+{#
+  SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+  SPDX-License-Identifier: Apache-2.0
+#}
+{% extends "base.html" %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<h1>Meeting with {{ booking.name }}</h1>
+
+<dl>
+  <dt>Booked by</dt>
+  <dd>{{ booking.name }} &lt;{{ booking.email }}&gt;</dd>
+  <dt>When</dt>
+  <dd>{{ start_local.strftime('%A, %d %B %Y, %H:%M %Z') }}, {{ booking.duration }} minutes</dd>
+  <dt>Video room</dt>
+  <dd><a href="{{ meeting_url }}" rel="noopener noreferrer">{{ meeting_url }}</a></dd>
+  {% if booking.message %}
+    <dt>Message</dt>
+    <dd class="message">{{ booking.message }}</dd>
+  {% endif %}
+</dl>
+<p class="note">Keep the address of this page private: everyone who has it can change or cancel the meeting.</p>
+
+{% if booking.cancelled %}
+  <p>This meeting was cancelled.</p>
+{% elif can_change %}
+  <h2>Reschedule</h2>
+  <p class="note">Working hours and your calendar are not enforced here. Times are in {{ timezone_name }}.</p>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="reschedule">
+    <div class="field">
+      <label for="date">Date</label>
+      <input type="date" id="date" name="date" value="{{ values.date }}" required>
+    </div>
+    <div class="field">
+      <label for="time">Start time</label>
+      <input type="time" id="time" name="time" value="{{ values.time }}" required>
+    </div>
+    <div class="field">
+      <label for="duration">Length in minutes</label>
+      <input type="number" id="duration" name="duration" value="{{ values.duration }}" min="5" max="480" required>
+    </div>
+    {% if conflicts %}
+      <div class="warning" role="alert">
+        <p>This time overlaps with:</p>
+        <ul>{% for c in conflicts %}<li>{{ c }}</li>{% endfor %}</ul>
+        <p><label><input type="checkbox" name="confirm" required> Reschedule anyway</label></p>
+      </div>
+    {% endif %}
+    <button type="submit">Reschedule</button>
+  </form>
+
+  <h2>Cancel the meeting</h2>
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="cancel">
+    <p><label><input type="checkbox" name="confirm" required> Yes, cancel this meeting</label></p>
+    <button type="submit" class="danger">Cancel meeting</button>
+  </form>
+{% else %}
+  <p>This meeting is over and can no longer be changed.</p>
+{% endif %}
+{% endblock %}

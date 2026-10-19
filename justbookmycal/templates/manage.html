@@ -1,0 +1,51 @@
+{#
+  SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+  SPDX-License-Identifier: Apache-2.0
+#}
+{% extends "base.html" %}
+{% from "macros.html" import slot_picker with context %}
+{% block title %}Your meeting{% endblock %}
+{% block content %}
+<h1>Your meeting with {{ owner_name }}</h1>
+
+{% if booking.cancelled %}
+  <p>This meeting was cancelled.</p>
+{% else %}
+  <dl>
+    <dt>When</dt>
+    <dd><time datetime="{{ booking.start.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-full>{{ start_local.strftime('%A, %d %B %Y, %H:%M %Z') }}</time></dd>
+    <dt>Length</dt>
+    <dd>{{ booking.duration }} minutes</dd>
+    <dt>Video room</dt>
+    <dd><a href="{{ meeting_url }}" rel="noopener noreferrer">{{ meeting_url }}</a></dd>
+  </dl>
+  <p><a href="{{ url_for('main.manage_ics', token=token) }}">Download the calendar file (.ics)</a></p>
+  <p class="note">Keep the address of this page private: everyone who has it can change or cancel the meeting.</p>
+
+  {% if can_change %}
+    <h2>Move the meeting</h2>
+    {% if days %}
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="reschedule">
+        {{ slot_picker(days, "Pick a new time") }}
+        <button type="submit">Move meeting</button>
+      </form>
+    {% elif days is none %}
+      <p>Moving is not possible right now. Please try again in a few minutes.</p>
+    {% else %}
+      <p>There are no other free times at the moment.</p>
+    {% endif %}
+
+    <h2>Cancel the meeting</h2>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="cancel">
+      <p><label><input type="checkbox" name="confirm" required> Yes, cancel this meeting</label></p>
+      <button type="submit" class="danger">Cancel meeting</button>
+    </form>
+  {% else %}
+    <p>This meeting is over and can no longer be changed.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,121 @@
+# SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+name: Test suites
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Test using the tool via uv on different OSes and python versions
+  test-os-python-matrix:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 10
+      # do not abort the whole test job if one combination in the matrix fails
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        os: [ ubuntu-24.04 ]
+        include:
+          - python-version: "3.11"
+            os: macos-latest
+          - python-version: "3.11"
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+        with:
+          python: ${{ matrix.python-version }}
+          uv_args: --no-dev
+      - name: Execute justbookmycal
+        run: |
+          uv run justbookmycal --help
+          uv run justbookmycal-cli --version
+
+  # Test building the package and installing it via pip3
+  test-build-install:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+      - name: Build package
+        run: uv build
+      - name: Install package
+        run: pip3 install dist/justbookmycal-*.tar.gz
+      - name: Run package
+        run: |
+          justbookmycal --version
+          justbookmycal-cli --version
+          justbookmycal --help
+
+  pytest:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Test with pytest
+        run: |
+          uv run pytest --cov=justbookmycal
+
+  # Quality checks
+  ruff-lint:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Lint with ruff
+        run: uv run ruff check
+
+  ruff-format:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Check formatting with ruff
+        run: uv run ruff format --check
+
+  ty:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/uvbuild
+      - name: Test typing with ty
+        run: uv run ty check
+
+  # REUSE
+  reuse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check REUSE Compliance
+        uses: fsfe/reuse-action@676e2d560c9a403aa252096d99fcab3e1132b0f5 # v6.0.0

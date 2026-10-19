@@ -1,0 +1,23 @@
+{#
+  SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+  SPDX-License-Identifier: Apache-2.0
+#}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>{% block title %}Book a meeting{% endblock %} · {{ owner_name }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="{{ url_for('static', filename='slots.js') }}" defer></script>
+</head>
+<body>
+<main>
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    <p class="flash {{ category }}" role="{{ 'alert' if category == 'error' else 'status' }}">{{ message }}</p>
+  {% endfor %}
+  {% block content %}{% endblock %}
+</main>
+</body>
+</html>

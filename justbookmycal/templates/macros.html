@@ -1,0 +1,38 @@
+{#
+  SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+  SPDX-License-Identifier: Apache-2.0
+#}
+{# Radio buttons for free slots, grouped by day. static/slots.js regroups them in the browser's time zone. #}
+{% macro slot_picker(days, legend) %}
+<fieldset data-slot-picker>
+  <legend>{{ legend }}</legend>
+  <p class="note" data-tz-note>Times are shown in {{ timezone_name }}.</p>
+  <div data-slot-days>
+    {% for day in days %}
+      <section class="day">
+        <h3>{{ day.label }}</h3>
+        <ul class="slots">
+          {% for slot in day.slots %}
+            <li>
+              <input type="radio" name="slot" id="slot-{{ slot.iso }}" value="{{ slot.iso }}" required>
+              <label for="slot-{{ slot.iso }}"><time datetime="{{ slot.iso }}">{{ slot.label }}</time></label>
+            </li>
+          {% endfor %}
+        </ul>
+      </section>
+    {% endfor %}
+  </div>
+</fieldset>
+{% endmacro %}
+
+{% macro field(f) %}
+<div class="field">
+  {{ f.label }}
+  {{ f(required=f.flags.required, aria_describedby=(f.id ~ '-errors') if f.errors else none, **kwargs) }}
+  {% if f.errors %}
+    <div id="{{ f.id }}-errors">
+      {% for error in f.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+    </div>
+  {% endif %}
+</div>
+{% endmacro %}

@@ -1,0 +1,132 @@
+# SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+#
+# SPDX-License-Identifier: CC0-1.0
+
+[project]
+name = "justbookmycal"
+version = "0.0.0"
+description = "Simple, self-hostable booking page: let others book meetings in the free slots of your ICS calendar feed."
+authors = [{ name = "Max Mehl", email = "mail@mehl.mx" }]
+requires-python = ">=3.10,<4"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "LICENSES/*"]
+keywords = ["calendar", "booking", "scheduling", "flask", "ics", "cal.com"]
+classifiers = [
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Framework :: Flask",
+    "Operating System :: OS Independent",
+    "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
+    "Topic :: Office/Business :: Scheduling",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "flask>=3.1.2,<4",
+    "flask-sqlalchemy>=3.1.1,<4",
+    "flask-migrate>=4.1.0,<5",
+    "flask-wtf>=1.2.2,<2",
+    "flask-limiter>=4.0.0,<5",
+    "email-validator>=2.3.0,<3",
+    "wtforms[email]>=3.2.1,<4",
+    "icalendar>=6.3.1,<8",
+    "recurring-ical-events>=3.8.0,<4",
+    "pyyaml>=6.0.1,<7",
+    "jsonschema>=4.25.1,<5",
+    "gunicorn>=26,<27",
+]
+
+[project.urls]
+Repository = "https://github.com/mxmehl/just-book-my-cal"
+Changelog = "https://github.com/mxmehl/just-book-my-cal/blob/main/CHANGELOG.md"
+
+[project.scripts]
+justbookmycal-cli = "justbookmycal.app:main"
+justbookmycal = "justbookmycal.wsgi:gunicorn"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.10",
+    "ty>=0.0.29",
+    "pytest>=9.0.0,<10",
+    "beautifulsoup4>=4.14.2,<5",
+    "pytest-cov>=7.0.0,<8",
+    "reuse[charset-normalizer]>=6.2.0",
+]
+
+[tool.uv]
+default-groups = "all"
+
+[tool.uv.build-backend]
+module-root = ""
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14.0"]
+build-backend = "uv_build"
+
+# PYTEST settings
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# FORMATTING and LINTING settings
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "T",
+    "FBT",
+    "LOG015",
+    "COM812",
+    "ERA001",
+    "S310",
+    "D205",
+    "D212",
+    "TD002",
+    "TD003",
+    "FIX002",
+    "CPY",
+    "PLR0917",
+]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"justbookmycal/migrations/*" = ["ALL"]
+"justbookmycal/gunicorn.conf.py" = ["N999"]
+"tests/*" = [
+    "D1",  # test names say what is tested
+    "ANN204",
+    "PYI034",
+    "S101",
+    "S105",
+    "S106",
+    "S108",
+    "SLF001",
+    "PLR",
+    "PT011",
+    "PT013",
+    "ANN001",
+    "ANN002",
+    "ANN003",
+    "ANN201",
+    "ANN202",
+    "ARG001",
+    "ARG002",
+    "ARG005",
+    "PLC0415",
+    "PTH",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+exclude = ["justbookmycal/migrations/**"]
+
+# TY settings
+[tool.ty.src]
+include = ["justbookmycal"]
+exclude = ["justbookmycal/migrations"]

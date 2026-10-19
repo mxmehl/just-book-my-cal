@@ -1,0 +1,94 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/mxmehl/just-book-my-cal/refs/heads/main/justbookmycal/config_schema.json
+# SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+# SPDX-License-Identifier: CC0-1.0
+
+# Example configuration file for just-book-my-cal
+# Copy this file to config.yaml and adjust the values to your needs.
+# Only the five keys marked REQUIRED have to be set. Everything else shows its default.
+
+# --- App ---------------------------------------------------------------------------------------
+# SQLAlchemy database URI; the database only contains bookings. Default: justbookmycal.db in the
+# directory the app is started from. Protect the file: it contains booker names and email addresses.
+# DATABASE_URI: "sqlite:////absolute/path/to/justbookmycal.db"
+# REQUIRED. Secret for session cookies and CSRF tokens, at least 32 characters.
+# Generate one with: python3 -c "import secrets; print(secrets.token_urlsafe(48))"
+SECRET_KEY: ""
+# Number of reverse proxies in front of the app (ProxyFix), so that rate limiting sees the real
+# client IP. Use 0 if the app is directly exposed. Default: 1
+TRUSTED_PROXIES: 1
+
+# --- Owner -------------------------------------------------------------------------------------
+# REQUIRED. Your name: used in the invitation and in the video room name.
+OWNER_NAME: "Jane Doe"
+# REQUIRED. Your email address: you receive the invitations here.
+OWNER_EMAIL: "jane@example.com"
+# IANA time zone in which the working hours are defined. Default: "UTC"
+TIMEZONE: "Europe/Berlin"
+
+# --- Calendar feeds ----------------------------------------------------------------------------
+# REQUIRED. Public ICS feeds of your calendars. Free times are computed from all of them.
+# Events marked "free" (TRANSP:TRANSPARENT) and cancelled events do not block time.
+ICS_FEEDS:
+  - "https://calendar.example.com/public/jane.ics"
+# How long a downloaded feed is reused, in seconds. Default: 300
+FEED_CACHE_SECONDS: 300
+# Timeout when downloading a feed, in seconds. Default: 10
+FEED_TIMEOUT_SECONDS: 10
+
+# --- Booking rules -----------------------------------------------------------------------------
+# Meeting lengths in minutes that people can choose from. Default: [15, 30, 60]
+DURATIONS: [15, 30, 60]
+# Working hours per weekday (mon..sun) in TIMEZONE, as "HH:MM-HH:MM" windows. Days that are not
+# listed are not bookable. Default: 09:00-17:00 from Monday to Friday
+WORKING_HOURS:
+  mon: ["09:00-12:00", "13:00-17:00"]
+  tue: ["09:00-12:00", "13:00-17:00"]
+  wed: ["09:00-12:00", "13:00-17:00"]
+  thu: ["09:00-12:00", "13:00-17:00"]
+  fri: ["09:00-15:00"]
+# Distance between possible start times, in minutes. Default: 15
+SLOT_STEP_MINUTES: 15
+# No bookings sooner than this many hours from now. Default: 12
+MIN_NOTICE_HOURS: 12
+# No bookings further ahead than this many days. Default: 30
+HORIZON_DAYS: 30
+# Free time to keep around existing events, in minutes. Default: 0
+BUFFER_MINUTES: 0
+# How many upcoming meetings one email address may have booked at the same time. Default: 2
+MAX_UPCOMING_PER_EMAIL: 2
+
+# --- Invitation --------------------------------------------------------------------------------
+# Every meeting gets its own room below this URL. Default: "https://meet.jit.si/"
+# Note that the room name contains both names, so the video server operator can see them.
+MEETING_BASE_URL: "https://meet.jit.si/"
+# Reminder before the meeting, in minutes. Use null for no reminder. Default: 15
+REMINDER_MINUTES: 15
+# Jinja2 templates for the event title and description. Available variables: booker_name,
+# booker_email, booker_message, owner_name, owner_email, duration, meeting_url, start_local,
+# start_utc, status ("booked", "rescheduled" or "cancelled")
+# EVENT_TITLE: "{{ booker_name }} / {{ owner_name }} ({{ duration }} min)"
+# EVENT_DESCRIPTION: "{% if booker_message %}{{ booker_message }}\n\n{% endif %}Join: {{ meeting_url }}"
+# Jinja2 templates for the text of the emails. Same variables as above, plus manage_url (booker's
+# mail) or admin_url (your mail). The links are only known for the first mail and when that side
+# changes the meeting, so check with {% if manage_url %} / {% if admin_url %}.
+# EMAIL_BODY_BOOKER: "..."
+# EMAIL_BODY_OWNER: "..."
+
+# --- Email -------------------------------------------------------------------------------------
+# REQUIRED. Sender and ORGANIZER of the invitations, e.g. a noreply address. You and the booker are
+# attendees. Using a system address instead of your own makes Outlook show a normal invitation.
+SYSTEM_EMAIL: "noreply@example.com"
+# SMTP server for sending the invitations. Default: "" (no mail is sent)
+SMTP_HOST: "smtp.example.com"
+# SMTP port. Default: 587
+SMTP_PORT: 587
+# SMTP login. Leave empty if no authentication is required. Default: ""
+SMTP_USER: "noreply@example.com"
+SMTP_PASS: "your-secure-password-here"
+# Use STARTTLS. Default: true
+SMTP_STARTTLS: true
+
+# --- Abuse protection --------------------------------------------------------------------------
+# Rate limit for all POST requests (booking, moving, cancelling) per client IP, in the notation of
+# Flask-Limiter. Default: "10 per hour"
+RATE_LIMIT_POST: "10 per hour"
