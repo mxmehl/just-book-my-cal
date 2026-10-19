@@ -91,7 +91,8 @@ class AppConfig:  # pylint: disable=too-few-public-methods
     SLOT_STEP_MINUTES: int = 15
     MIN_NOTICE_HOURS: float = 12
     HORIZON_DAYS: int = 30
-    BUFFER_MINUTES: int = 0
+    BUFFER_MINUTES_BEFORE: int = 0  # free time required before a meeting
+    BUFFER_MINUTES_AFTER: int = 0  # free time required after a meeting
     MAX_UPCOMING_PER_EMAIL: int = 2
 
     # Invitation

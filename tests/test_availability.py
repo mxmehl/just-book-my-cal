@@ -174,13 +174,48 @@ def test_busy_blocks_overlapping_slots_only():
     assert "Mon 11:00" in slots  # starts exactly when the event ends
 
 
-def test_buffer_keeps_distance_to_events():
+def test_buffer_before_keeps_distance_after_events_only():
+    # Event 10:00-11:00. 30 minutes of buffer before a meeting: the previous event must have ended
+    # at least that long before the meeting starts, but a meeting may end right when one starts.
     busy = [(berlin(2026, 10, 19, 10, 0), berlin(2026, 10, 19, 11, 0), "x")]
-    slots = local_slots(compute_slots(rules(BUFFER_MINUTES=15, HORIZON_DAYS=1), 30, busy, NOW))
-    assert "Mon 09:15" in slots
-    assert "Mon 09:30" not in slots
-    assert "Mon 11:15" in slots
+    slots = local_slots(
+        compute_slots(rules(BUFFER_MINUTES_BEFORE=30, HORIZON_DAYS=1), 30, busy, NOW)
+    )
+    assert "Mon 09:30" in slots  # ends exactly when the event starts: no buffer needed after
+    assert "Mon 11:00" not in slots  # would start right after the event
+    assert "Mon 11:15" not in slots
+    assert "Mon 11:30" in slots  # 30 minutes after the event ended
+
+
+def test_buffer_after_keeps_distance_before_events_only():
+    busy = [(berlin(2026, 10, 19, 10, 0), berlin(2026, 10, 19, 11, 0), "x")]
+    slots = local_slots(
+        compute_slots(rules(BUFFER_MINUTES_AFTER=30, HORIZON_DAYS=1), 30, busy, NOW)
+    )
+    assert "Mon 09:00" in slots  # ends 09:30, the event starts 30 minutes later
+    assert "Mon 09:15" not in slots
+    assert "Mon 09:30" not in slots  # would end right when the event starts
+    assert "Mon 11:00" in slots  # starting right after an event needs no buffer before
+
+
+def test_buffers_can_differ():
+    busy = [(berlin(2026, 10, 19, 10, 0), berlin(2026, 10, 19, 11, 0), "x")]
+    slots = local_slots(
+        compute_slots(
+            rules(BUFFER_MINUTES_BEFORE=15, BUFFER_MINUTES_AFTER=30, HORIZON_DAYS=1), 30, busy, NOW
+        )
+    )
+    assert "Mon 09:00" in slots
+    assert "Mon 09:15" not in slots
     assert "Mon 11:00" not in slots
+    assert "Mon 11:15" in slots
+
+
+def test_old_buffer_setting_is_rejected(tmp_path):
+    from .test_config import write_config
+
+    with pytest.raises(ValueError, match="BUFFER_MINUTES"):
+        AppConfig.from_yaml(write_config(tmp_path, BUFFER_MINUTES=15))
 
 
 def test_minimum_notice():

@@ -53,7 +53,11 @@ MIN_NOTICE_HOURS: 12
 # No bookings further ahead than this many days. Default: 30
 HORIZON_DAYS: 30
 # Free time to keep around existing events, in minutes. Default: 0
-BUFFER_MINUTES: 0
+# Free time to keep before a meeting (between the previous event and its start), in minutes.
+# Default: 0
+BUFFER_MINUTES_BEFORE: 0
+# Free time to keep after a meeting (between its end and the next event), in minutes. Default: 0
+BUFFER_MINUTES_AFTER: 0
 # How many upcoming meetings one email address may have booked at the same time. Default: 2
 MAX_UPCOMING_PER_EMAIL: 2
 

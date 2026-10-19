@@ -24,7 +24,7 @@ from .config import AppConfig
 from .extensions import db, limiter
 from .views import bp
 
-DEFAULT_PORT = 2278
+DEFAULT_PORT = 5262
 
 
 def configure_logging(debug: bool) -> None:

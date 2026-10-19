@@ -8,7 +8,7 @@
 A small, self-hosted alternative to cal.com for one person: others book a meeting with you in the free times of your calendar. No accounts, no admin interface, no external services.
 
 - Reads your busy times from one or more public ICS feeds, including recurring events and moved or cancelled instances.
-- Offers only slots that fit your rules: working hours per weekday (with breaks), the meeting lengths you choose (e.g. 15/30/60 minutes), minimum notice, booking horizon and a buffer around existing events.
+- Offers only slots that fit your rules: working hours per weekday (with breaks), the meeting lengths you choose (e.g. 15/30/60 minutes), minimum notice, booking horizon and buffers before and after your meetings.
 - Books instantly. You and the booker both get a calendar invitation (ICS) by email, with a video room (Jitsi) of its own for each meeting and an optional reminder.
 - Both sides get a private link to reschedule or cancel. The booker can only move the meeting into slots that are free under your rules. You can move it anywhere, with a warning if that overlaps with something.
 - Visitors see the times in their own time zone (a few lines of JavaScript; without them, the times are shown in your time zone).
@@ -24,7 +24,7 @@ You need [uv](https://docs.astral.sh/uv/) and Python 3.10 or newer.
 uv sync --no-dev
 cp config.example.yaml config.yaml    # then edit it, at least the keys marked REQUIRED
 uv run justbookmycal-cli --db upgrade # creates the database; run again after updates
-uv run justbookmycal-cli --debug      # development server on http://127.0.0.1:2278
+uv run justbookmycal-cli --debug      # development server on http://127.0.0.1:5262
 ```
 
 Before you publish the page, check that the app sees your calendar the way you expect:
@@ -63,7 +63,7 @@ Each meeting gets a video room like `https://meet.jit.si/MaxMehl-JaneDoe-2026102
 Run the app with gunicorn behind a reverse proxy that terminates TLS:
 
 ```sh
-uv run justbookmycal --app-config /path/to/config.yaml   # listens on 127.0.0.1:2278
+uv run justbookmycal --app-config /path/to/config.yaml   # listens on 127.0.0.1:5262
 ```
 
 The bundled gunicorn configuration uses a single worker on purpose: the rate limiter and the feed cache live in memory of the process. Pass your own with `--gunicorn-config` if you need something else.
@@ -72,7 +72,7 @@ An nginx location for it:
 
 ```nginx
 location / {
-    proxy_pass http://127.0.0.1:2278;
+    proxy_pass http://127.0.0.1:5262;
     proxy_set_header Host $host;
     proxy_set_header X-Forwarded-For $remote_addr;
     proxy_set_header X-Forwarded-Proto $scheme;

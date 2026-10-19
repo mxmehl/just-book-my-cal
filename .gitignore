@@ -232,6 +232,6 @@ config.yaml
 /SECURITY_*.md
 
 # just-book-my-cal
-/config.yaml
+config.yaml
 *.db
 *.db-journal

@@ -168,7 +168,8 @@ class Rules:
     step: timedelta
     notice: timedelta
     horizon: timedelta
-    buffer: timedelta
+    buffer_before: timedelta  # free time required before a meeting
+    buffer_after: timedelta  # free time required after a meeting
 
     @classmethod
     def from_config(cls, cfg: Mapping[str, Any]) -> "Rules":
@@ -186,7 +187,8 @@ class Rules:
             step=timedelta(minutes=cfg["SLOT_STEP_MINUTES"]),
             notice=timedelta(hours=cfg["MIN_NOTICE_HOURS"]),
             horizon=timedelta(days=cfg["HORIZON_DAYS"]),
-            buffer=timedelta(minutes=cfg["BUFFER_MINUTES"]),
+            buffer_before=timedelta(minutes=cfg["BUFFER_MINUTES_BEFORE"]),
+            buffer_after=timedelta(minutes=cfg["BUFFER_MINUTES_AFTER"]),
         )
 
 
@@ -204,9 +206,8 @@ def compute_slots(rules: Rules, duration: int, busy: list[Busy], now: datetime) 
     """
     length = timedelta(minutes=duration)
     earliest, latest = now + rules.notice, now + rules.horizon
-    # ponytail: linear scan of all blocks per candidate. Fine for a few hundred events; sort and
-    # bisect if a feed ever gets huge.
-    blocks = [(s - rules.buffer, e + rules.buffer) for s, e, _ in busy]
+    # ponytail: linear scan of all busy blocks per candidate. Fine for a few hundred events; sort
+    # and bisect if a feed ever gets huge.
     slots: list[datetime] = []
     day = now.astimezone(rules.tz).date()
     last_day = latest.astimezone(rules.tz).date()
@@ -215,8 +216,13 @@ def compute_slots(rules: Rules, duration: int, busy: list[Busy], now: datetime) 
             slot = datetime.combine(day, window_start, tzinfo=rules.tz).astimezone(timezone.utc)
             end = datetime.combine(day, window_end, tzinfo=rules.tz).astimezone(timezone.utc)
             while slot + length <= end:
+                # The meeting plus its buffers must not touch any busy block
+                guarded_start, guarded_end = (
+                    slot - rules.buffer_before,
+                    slot + length + rules.buffer_after,
+                )
                 free = not any(
-                    slot < b_end and slot + length > b_start for b_start, b_end in blocks
+                    guarded_start < b_end and guarded_end > b_start for b_start, b_end, _ in busy
                 )
                 if earliest <= slot <= latest and free:
                     slots.append(slot)

@@ -5,7 +5,7 @@
 """Gunicorn configuration file."""
 
 # Server socket. Binds to localhost: put a reverse proxy with TLS in front of it
-bind = "127.0.0.1:2278"
+bind = "127.0.0.1:5262"
 
 # Worker processes
 workers = 1
