@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.2](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.1...v0.1.2) (2026-10-19)
+
+
+### 🔥 Bug Fixes
+
+* find config file in user config dir, and locate DB there ([fd5ae5c](https://github.com/mxmehl/just-book-my-cal/commit/fd5ae5cfa9e574aca5df6f7b63aa30c626777fae))
+
+
+### 📚 Documentation
+
+* add shields ([e0bb6d5](https://github.com/mxmehl/just-book-my-cal/commit/e0bb6d5f2f44e2e1859959c366935cdcbf903b20))
+
 ## [0.1.1](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.0...v0.1.1) (2026-10-19)
 
 
