@@ -28,9 +28,11 @@ You need [uv](https://docs.astral.sh/uv/) and Python 3.10 or newer.
 ```sh
 uv sync --no-dev
 cp config.example.yaml config.yaml    # then edit it, at least the keys marked REQUIRED
-uv run justbookmycal-cli --db upgrade # creates the database; run again after updates
-uv run justbookmycal-cli --debug      # development server on http://127.0.0.1:5262
+uv run justbookmycal-cli -c config.yaml --db upgrade # creates the database; run again after updates
+uv run justbookmycal-cli -c config.yaml --debug      # development server on http://127.0.0.1:5262
 ```
+
+Without `-c`/`--app-config`, the config file is looked for in your user config directory, independent of the directory you start the app from: `~/.config/justbookmycal/config.yaml` on Linux, `~/Library/Application Support/justbookmycal/config.yaml` on macOS. Put your `config.yaml` there for a permanent installation, and the commands work without the option. The database (`justbookmycal.db`) lives next to it unless you set `DATABASE_URI`. For local development, set `DATABASE_URI` in your config to a path inside the repository, such as `instance/justbookmycal.db`, to keep it apart. If the config file is missing, the error message names the full path that was tried.
 
 Before you publish the page, check that the app sees your calendar the way you expect:
 

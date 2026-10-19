@@ -17,8 +17,8 @@ Single-user booking page (a minimal self-hosted cal.com alternative): reads busy
 uv sync                                   # install / sync deps
 mise run test-all                         # all checks at once (ruff, ty, reuse, pytest)
 mise run fix-all                          # auto-fix lint/format issues
-uv run justbookmycal-cli --db upgrade     # create or migrate the database
-uv run justbookmycal-cli --debug          # run the dev server (needs config.yaml, see config.example.yaml)
+uv run justbookmycal-cli -c config.yaml --db upgrade  # create or migrate the database
+uv run justbookmycal-cli -c config.yaml --debug       # run the dev server (copy config.example.yaml to config.yaml first)
 ```
 
 ## Architecture

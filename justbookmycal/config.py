@@ -16,7 +16,9 @@ from jinja2 import TemplateSyntaxError
 from jinja2.sandbox import SandboxedEnvironment
 from jsonschema import FormatChecker, validate
 from jsonschema.exceptions import ValidationError
+from platformdirs import user_config_path
 
+APP_NAME = "justbookmycal"
 DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 # Variables of the MEETING_URL template, with an example of each (used to check the template)
@@ -74,11 +76,32 @@ def _load_config_schema() -> dict:
 CONFIG_SCHEMA = _load_config_schema()
 
 
+def default_config_path() -> str:
+    """Where the configuration file is looked for if no path is given.
+
+    This is the user config directory of the platform, e.g. `~/.config/justbookmycal/config.yaml`
+    on Linux or `~/Library/Application Support/justbookmycal/config.yaml` on macOS. Unlike a
+    relative path, it does not depend on the directory the app is started from. Nothing is
+    created.
+    """
+    return str(user_config_path(appname=APP_NAME) / "config.yaml")
+
+
+def default_database_uri() -> str:
+    """Database URI used if the config sets no DATABASE_URI: SQLite next to the config file.
+
+    The directory is created if needed, because SQLite cannot do that.
+    """
+    directory = user_config_path(appname=APP_NAME)
+    directory.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{directory / 'justbookmycal.db'}"
+
+
 class AppConfig:  # pylint: disable=too-few-public-methods
     """Flask configuration from YAML file with some defaults."""
 
     # App settings
-    DATABASE_URI: str = ""  # Empty here; app setup falls back to SQLite in the working directory.
+    DATABASE_URI: str = ""  # Empty here; app setup falls back to SQLite in the user config dir.
     SECRET_KEY: str = ""  # Empty here; production startup requires a non-empty value.
     TRUSTED_PROXIES: int = 1  # Number of reverse proxies in front (ProxyFix); 0 disables
 

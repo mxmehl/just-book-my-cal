@@ -7,8 +7,9 @@
 # Only the five keys marked REQUIRED have to be set. Everything else shows its default.
 
 # --- App ---------------------------------------------------------------------------------------
-# SQLAlchemy database URI; the database only contains bookings. Default: justbookmycal.db in the
-# directory the app is started from. Protect the file: it contains booker names and email addresses.
+# SQLAlchemy database URI; the database only contains bookings. Default: justbookmycal.db next to
+# the default config file, in the user config directory (see README). Protect the file: it contains
+# booker names and email addresses.
 # DATABASE_URI: "sqlite:////absolute/path/to/justbookmycal.db"
 # REQUIRED. Secret for session cookies, CSRF tokens and the private manage/admin links. At least 32
 # characters. Do not change it while there are upcoming meetings: the links in later mails for them

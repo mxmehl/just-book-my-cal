@@ -15,6 +15,7 @@ from flask import Flask
 
 from . import __version__
 from .app import create_app_wrapper
+from .config import default_config_path
 
 
 def main() -> Flask | None:
@@ -30,7 +31,7 @@ def main() -> Flask | None:
         logging.critical("CONFIG_FILE environment variable is not set")
         return None
     if not Path(config_path).exists():
-        logging.critical("Configuration file %s does not exist", config_path)
+        logging.critical("Configuration file %s does not exist", Path(config_path).resolve())
         return None
     config_path = str(Path(config_path).resolve())
     logging.info("Using configuration file: %s", config_path)
@@ -48,7 +49,7 @@ def gunicorn() -> None:
         "--app-config",
         type=str,
         help="Path to YAML configuration file",
-        default="config.yaml",
+        default=default_config_path(),
     )
     parser.add_argument(
         "-gc",

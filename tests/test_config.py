@@ -149,3 +149,48 @@ def test_meeting_url_is_checked(tmp_path, url, message):
 def test_old_meeting_base_url_setting_is_rejected(tmp_path):
     with pytest.raises(ValueError, match="MEETING_BASE_URL"):
         AppConfig.from_yaml(write_config(tmp_path, MEETING_BASE_URL="https://meet.jit.si/"))
+
+
+@pytest.fixture(name="fake_user_dir")
+def fixture_fake_user_dir(tmp_path, monkeypatch):
+    """Point the user config directory to a temp dir, so tests never touch the real one."""
+    from justbookmycal import config
+
+    monkeypatch.setattr(config, "user_config_path", lambda appname: tmp_path / "conf" / appname)
+    return tmp_path / "conf" / "justbookmycal"
+
+
+def test_default_database_is_next_to_the_default_config(fake_user_dir):
+    from justbookmycal.config import default_config_path, default_database_uri
+
+    uri = default_database_uri()
+    assert uri == f"sqlite:///{fake_user_dir / 'justbookmycal.db'}"
+    assert fake_user_dir.is_dir()  # created: SQLite cannot do that itself
+    assert Path(default_config_path()).parent == fake_user_dir
+
+
+def test_app_uses_the_default_database_without_database_uri(fake_user_dir, tmp_path):
+    app = create_app(yaml_config_path=str(write_config(tmp_path)))
+    assert (
+        app.config["SQLALCHEMY_DATABASE_URI"] == f"sqlite:///{fake_user_dir / 'justbookmycal.db'}"
+    )
+
+
+def test_database_uri_from_the_config_wins(fake_user_dir, tmp_path):
+    uri = f"sqlite:///{tmp_path / 'elsewhere.db'}"
+    app = create_app(yaml_config_path=str(write_config(tmp_path, DATABASE_URI=uri)))
+    assert app.config["SQLALCHEMY_DATABASE_URI"] == uri
+    assert not fake_user_dir.exists()  # nothing is created if it is not needed
+
+
+def test_the_working_directory_does_not_matter(fake_user_dir, tmp_path, monkeypatch):
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    app = create_app(yaml_config_path=str(write_config(tmp_path)))
+    assert str(elsewhere) not in app.config["SQLALCHEMY_DATABASE_URI"]
+
+
+def test_test_overrides_do_not_create_directories(fake_user_dir):
+    create_app(config_overrides={"TESTING": True, "SQLALCHEMY_DATABASE_URI": "sqlite:///:memory:"})
+    assert not fake_user_dir.exists()

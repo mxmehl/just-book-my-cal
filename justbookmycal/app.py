@@ -20,7 +20,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from . import __version__, availability
 from .availability import FeedError
-from .config import AppConfig
+from .config import AppConfig, default_config_path, default_database_uri
 from .extensions import db, limiter
 from .views import bp
 
@@ -117,10 +117,10 @@ def create_app(
         msg = "SECRET_KEY must be set and non-empty in your config.yaml"
         raise ValueError(msg)
 
-    # Database. Default: next to where the app is started
-    if not app.config.get("DATABASE_URI"):
-        app.config["DATABASE_URI"] = "sqlite:///" + str(Path.cwd() / "justbookmycal.db")
-    app.config.setdefault("SQLALCHEMY_DATABASE_URI", app.config["DATABASE_URI"])
+    # Database. Default: next to the config file in the user config directory, as for the config
+    if "SQLALCHEMY_DATABASE_URI" not in app.config:
+        app.config["SQLALCHEMY_DATABASE_URI"] = app.config["DATABASE_URI"] or default_database_uri()
+    logging.info("Using database at %s", app.config["SQLALCHEMY_DATABASE_URI"])
     db.init_app(app)
     Migrate(app=app, db=db, directory=str(Path(__file__).parent.resolve() / "migrations"))
 
@@ -180,7 +180,7 @@ def main() -> None:
         "--app-config",
         type=str,
         help="Path to YAML configuration file",
-        default="config.yaml",
+        default=default_config_path(),
     )
     parser.add_argument(
         "--db",
