@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.3](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.2...v0.1.3) (2026-10-19)
+
+
+### ⚙️ Chores
+
+* add favicon ([9a00920](https://github.com/mxmehl/just-book-my-cal/commit/9a009204c67631ef74044b59f078a16a011ffc83))
+* make meeting links open in new tabs ([67c5742](https://github.com/mxmehl/just-book-my-cal/commit/67c57424f4ee0ca6928ce777cfa38334e4cef8ff))
+
 ## [0.1.2](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.1...v0.1.2) (2026-10-19)
 
 
