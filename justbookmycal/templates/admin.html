@@ -13,7 +13,7 @@
   <dt>When</dt>
   <dd>{{ start_local.strftime('%A, %d %B %Y, %H:%M %Z') }}, {{ booking.duration }} minutes</dd>
   <dt>Video room</dt>
-  <dd><a href="{{ meeting_url }}" rel="noopener noreferrer">{{ meeting_url }}</a></dd>
+  <dd><a href="{{ meeting_url }}" rel="noopener noreferrer" target="_blank">{{ meeting_url }}</a></dd>
   {% if booking.message %}
     <dt>Message</dt>
     <dd class="message">{{ booking.message }}</dd>

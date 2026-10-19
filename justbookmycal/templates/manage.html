@@ -17,7 +17,7 @@
     <dt>Length</dt>
     <dd>{{ booking.duration }} minutes</dd>
     <dt>Video room</dt>
-    <dd><a href="{{ meeting_url }}" rel="noopener noreferrer">{{ meeting_url }}</a></dd>
+    <dd><a href="{{ meeting_url }}" rel="noopener noreferrer" target="_blank">{{ meeting_url }}</a></dd>
   </dl>
   <p><a href="{{ url_for('main.manage_ics', token=token) }}">Download the calendar file (.ics)</a></p>
   <p class="note">Keep the address of this page private: everyone who has it can change or cancel the meeting.</p>
