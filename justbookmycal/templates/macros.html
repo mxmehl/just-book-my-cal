@@ -2,6 +2,14 @@
   SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
   SPDX-License-Identifier: Apache-2.0
 #}
+{% macro week_nav(week) %}
+<nav class="weeknav" aria-label="Week">
+  {% if week.prev_url %}<a href="{{ week.prev_url }}" rel="prev">&larr; Previous week</a>{% else %}<span class="disabled" aria-hidden="true">&larr; Previous week</span>{% endif %}
+  <strong aria-live="polite">{{ week.label }}</strong>
+  {% if week.next_url %}<a href="{{ week.next_url }}" rel="next">Next week &rarr;</a>{% else %}<span class="disabled" aria-hidden="true">Next week &rarr;</span>{% endif %}
+</nav>
+{% endmacro %}
+
 {# Radio buttons for free slots, grouped by day. static/slots.js regroups them in the browser's time zone. #}
 {% macro slot_picker(days, legend) %}
 <fieldset data-slot-picker>

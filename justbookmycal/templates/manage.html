@@ -3,7 +3,7 @@
   SPDX-License-Identifier: Apache-2.0
 #}
 {% extends "base.html" %}
-{% from "macros.html" import slot_picker with context %}
+{% from "macros.html" import slot_picker, week_nav with context %}
 {% block title %}Your meeting{% endblock %}
 {% block content %}
 <h1>Your meeting with {{ owner_name }}</h1>
@@ -24,17 +24,22 @@
 
   {% if can_change %}
     <h2>Move the meeting</h2>
-    {% if days %}
-      <form method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="reschedule">
-        {{ slot_picker(days, "Pick a new time") }}
-        <button type="submit">Move meeting</button>
-      </form>
-    {% elif days is none %}
+    {% if week is none %}
       <p>Moving is not possible right now. Please try again in a few minutes.</p>
-    {% else %}
+    {% elif not week.has_slots %}
       <p>There are no other free times at the moment.</p>
+    {% else %}
+      {{ week_nav(week) }}
+      {% if week.days %}
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="reschedule">
+          {{ slot_picker(week.days, "Pick a new time") }}
+          <button type="submit">Move meeting</button>
+        </form>
+      {% else %}
+        <p>There are no free times this week. Use the arrows to look at another week.</p>
+      {% endif %}
     {% endif %}
 
     <h2>Cancel the meeting</h2>

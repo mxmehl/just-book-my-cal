@@ -7,7 +7,7 @@
 import logging
 import secrets
 import uuid
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -121,6 +121,47 @@ def _days(slots: list[datetime]) -> list[dict[str, Any]]:
     return [{"label": f"{day:%A, %d %B %Y}", "slots": s} for day, s in days.items()]
 
 
+def _monday(day: date) -> date:
+    """The Monday of the week a day is in."""
+    return day - timedelta(days=day.weekday())
+
+
+def _week(slots: list[datetime], now: datetime, make_url: Callable[[date], str]) -> dict[str, Any]:
+    """Pick the calendar week (Monday to Sunday, owner's time zone) to show, with its slots.
+
+    The week comes from the `week` parameter (any date in it). Without a valid one, it is the week
+    of the first free slot, so nobody lands on an empty week. Weeks before the current one and
+    after the booking horizon are not offered.
+
+    Args:
+        slots: all free slots (UTC)
+        now: current time (aware)
+        make_url: builds the URL of a page for the week starting on the given Monday
+
+    Returns:
+        Dict with the template's `days`, a `label`, `prev_url`/`next_url` (None at the ends) and
+        `has_slots` (whether there are free slots in any week)
+    """
+    tz = _tz()
+    first = _monday(now.astimezone(tz).date())
+    last = _monday((now + timedelta(days=current_app.config["HORIZON_DAYS"])).astimezone(tz).date())
+    try:
+        requested = date.fromisoformat(request.values.get("week", ""))
+    except ValueError:
+        requested = _monday(slots[0].astimezone(tz).date()) if slots else first
+    start = min(max(_monday(requested), first), last)
+    end = start + timedelta(days=7)
+    in_week = [s for s in slots if start <= s.astimezone(tz).date() < end]
+    last_day = end - timedelta(days=1)
+    return {
+        "days": _days(in_week),
+        "label": f"{start:%a %d %b} \N{EN DASH} {last_day:%a %d %b %Y}",
+        "prev_url": make_url(start - timedelta(days=7)) if start > first else None,
+        "next_url": make_url(end) if start < last else None,
+        "has_slots": bool(slots),
+    }
+
+
 def _valid_duration(value: int | None) -> int:
     """Return the duration if the owner offers it, else answer 400."""
     if value is None or value not in current_app.config["DURATIONS"]:
@@ -196,15 +237,17 @@ def _cancel(booking: Booking, now: datetime) -> None:
 def _render_index(form: BookingForm, duration: int, status: int = 200) -> Reply:
     """Render the booking page with the free slots of a meeting length."""
     cfg = current_app.config
-    slots = availability.free_slots(cfg, duration, availability.utcnow())
+    now = availability.utcnow()
+    slots = availability.free_slots(cfg, duration, now)
     db.session.rollback()  # release the database lock before rendering
+    week = _week(slots, now, lambda d: url_for("main.index", duration=duration, week=d.isoformat()))
     return (
         render_template(
             "index.html",
             form=form,
             duration=duration,
             durations=cfg["DURATIONS"],
-            days=_days(slots),
+            week=week,
             horizon_days=cfg["HORIZON_DAYS"],
         ),
         status,
@@ -287,10 +330,13 @@ def manage(token: str) -> Reply:
     booking = _booking_by_token(Booking.booker_token_hash, token)
     now = availability.utcnow()
     can_change = _is_open(booking, now)
-    days = None  # None: the calendar is unavailable right now
+    week = None  # None: the calendar is unavailable right now
     if can_change:
         try:
-            days = _days(availability.free_slots(cfg, booking.duration, now, exclude=booking))
+            slots = availability.free_slots(cfg, booking.duration, now, exclude=booking)
+            week = _week(
+                slots, now, lambda d: url_for("main.manage", token=token, week=d.isoformat())
+            )
         except FeedError:
             flash("The calendar is unavailable at the moment, so moving is not possible.", "error")
     return render_template(
@@ -298,7 +344,7 @@ def manage(token: str) -> Reply:
         booking=booking,
         token=token,
         can_change=can_change,
-        days=days,
+        week=week,
         meeting_url=invite.meeting_url(cfg, booking),
         start_local=booking.start.astimezone(_tz()),
     )

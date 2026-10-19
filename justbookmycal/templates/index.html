@@ -3,7 +3,7 @@
   SPDX-License-Identifier: Apache-2.0
 #}
 {% extends "base.html" %}
-{% from "macros.html" import slot_picker, field with context %}
+{% from "macros.html" import slot_picker, week_nav, field with context %}
 {% block content %}
 <h1>Book a meeting with {{ owner_name }}</h1>
 
@@ -15,11 +15,14 @@
   </ul>
 </nav>
 
-{% if days %}
+{% if week.has_slots %}
+{{ week_nav(week) }}
+{% if week.days %}
 <form method="post" action="{{ url_for('main.book') }}">
   {{ form.csrf_token }}
   <input type="hidden" name="duration" value="{{ duration }}">
-  {{ slot_picker(days, "Pick a time") }}
+  <input type="hidden" name="week" value="{{ request.values.get('week', '') }}">
+  {{ slot_picker(week.days, "Pick a time") }}
   {% for error in form.slot.errors %}<p class="field-error" role="alert">Please pick a time.</p>{% endfor %}
 
   <h2>Your details</h2>
@@ -30,6 +33,9 @@
 
   <button type="submit">Book {{ duration }} minutes</button>
 </form>
+{% else %}
+<p>There are no free times this week. Use the arrows to look at another week.</p>
+{% endif %}
 {% else %}
 <p>There are no free times for the next {{ horizon_days }} days. Please check back later.</p>
 {% endif %}

@@ -10,6 +10,7 @@
   --accent: #1b5fa8;
   --danger: #a61b1b;
   --border: #c4c4c4;
+  --bar-bg: #f1f4f8;
   --warn-bg: #fff4d6;
   color-scheme: light dark;
 }
@@ -22,6 +23,7 @@
     --accent: #7db4f0;
     --danger: #ff8a8a;
     --border: #555555;
+    --bar-bg: #222a33;
     --warn-bg: #4a3d12;
   }
 }
@@ -108,3 +110,45 @@ dd { margin: 0; }
 
 /* Honeypot: out of sight for people, tempting for bots */
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+
+/* Week navigation: a bar with button-like arrows, so it is clear that it can be changed */
+.weeknav {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); /* equal sides: label stays centred */
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin: 1.5rem 0 0;
+  padding: 0.5rem;
+  background: var(--bar-bg);
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}
+.weeknav strong { text-align: center; }
+.weeknav > :first-child { justify-self: start; }
+.weeknav > :last-child { justify-self: end; }
+.weeknav a, .weeknav .disabled {
+  display: inline-block;
+  min-width: 10.5rem; /* both buttons equally wide, so the label sits in the middle of the gap */
+  padding: 0.45rem 0.7rem;
+  box-sizing: border-box;
+  text-align: center;
+  border: 1px solid var(--accent);
+  border-radius: 0.4rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.weeknav a:hover { background: var(--accent); color: var(--bg); }
+.weeknav .disabled { border-color: var(--border); color: var(--muted); opacity: 0.6; }
+
+@media (max-width: 40rem) {
+  /* Not enough room for everything in one row: the week on its own line above the two buttons */
+  .weeknav { grid-template-columns: 1fr 1fr; }
+  .weeknav strong { grid-column: 1 / -1; order: -1; }
+  .weeknav > :first-child, .weeknav > :last-child { justify-self: stretch; }
+  .weeknav a, .weeknav .disabled {
+    min-width: 0;
+    padding-inline: 0.3rem;
+    font-size: 0.9rem;
+    white-space: normal; /* on very narrow screens the text may wrap instead of overflowing */
+  }
+}

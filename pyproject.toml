@@ -98,6 +98,7 @@ ignore = [
 "justbookmycal/gunicorn.conf.py" = ["N999"]
 "tests/*" = [
     "D1",  # test names say what is tested
+    "RUF001",  # the UI uses an en dash in date ranges
     "ANN204",
     "PYI034",
     "S101",

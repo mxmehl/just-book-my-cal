@@ -97,7 +97,9 @@ def test_index_first_slot_is_the_next_free_time(client):
 
 def test_durations_are_offered_as_navigation(client):
     soup = BeautifulSoup(client.get("/?duration=60").data, "html.parser")
-    links_ = {a.text: a.get("aria-current") for a in soup.select("nav a")}
+    links_ = {
+        a.text: a.get("aria-current") for a in soup.select("nav[aria-label='Meeting length'] a")
+    }
     assert links_ == {"15 minutes": None, "30 minutes": None, "60 minutes": "page"}
 
 
@@ -396,3 +398,154 @@ def test_changing_the_secret_key_breaks_later_links_but_not_sent_ones(app, clien
     assert links(outbox)["manage"] != link  # derived from the new secret: does not match anymore
     assert client.get(links(outbox)["manage"]).status_code == 404
     app.config["SECRET_KEY"] = old_secret
+
+
+# ---------------------------------------------------------------------------------------------
+# Week by week
+# ---------------------------------------------------------------------------------------------
+
+
+def days_of(slots: list[str]) -> set[str]:
+    """The UTC dates of slot values."""
+    return {s[:10] for s in slots}
+
+
+def pager(response) -> dict[str, str | None]:
+    """Label and links of the week navigation: {'label', 'prev', 'next'}."""
+    soup = BeautifulSoup(response.data, "html.parser")
+    nav = soup.select_one("nav[aria-label=Week]")
+    prev_link, next_link = nav.select_one("a[rel=prev]"), nav.select_one("a[rel=next]")
+    return {
+        "label": nav.select_one("strong").text,
+        "prev": prev_link["href"] if prev_link else None,
+        "next": next_link["href"] if next_link else None,
+    }
+
+
+def block_days(feed: Feed, first: str, last_exclusive: str) -> None:
+    """Make the feed contain one all-day event that blocks the given days."""
+    feed.data = (
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:x\r\nBEGIN:VEVENT\r\nUID:away\r\n"
+        f"DTSTAMP:20260101T000000Z\r\nDTSTART;VALUE=DATE:{first}\r\n"
+        f"DTEND;VALUE=DATE:{last_exclusive}\r\nSUMMARY:Away\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+    ).encode()
+
+
+def test_only_the_current_week_is_listed(client):
+    response = client.get("/?duration=30")
+    offered = slots_of(response)
+    # Monday 19th to Friday 23rd (working days); nothing from the following week
+    assert days_of(offered) == {
+        "2026-10-19",
+        "2026-10-20",
+        "2026-10-21",
+        "2026-10-22",
+        "2026-10-23",
+    }
+    assert pager(response) == {
+        "label": "Mon 19 Oct – Sun 25 Oct 2026",
+        "prev": None,  # this is the first week
+        "next": "/?duration=30&week=2026-10-26",
+    }
+
+
+def test_next_week_and_back(client):
+    response = client.get("/?duration=30&week=2026-10-26")
+    offered = slots_of(response)
+    # The clocks went back on Sunday: 09:00 Berlin is 08:00 UTC from the 26th on
+    assert "2026-10-26T08:00:00Z" in offered
+    assert days_of(offered) == {
+        "2026-10-26",
+        "2026-10-27",
+        "2026-10-28",
+        "2026-10-29",
+        "2026-10-30",
+    }
+    links_ = pager(response)
+    assert links_["label"] == "Mon 26 Oct – Sun 01 Nov 2026"
+    assert links_["prev"] == "/?duration=30&week=2026-10-19"
+    assert links_["next"] == "/?duration=30&week=2026-11-02"
+    # Following the arrow back leads to the first week again
+    assert days_of(slots_of(client.get(links_["prev"]))) == days_of(
+        slots_of(client.get("/?duration=30"))
+    )
+
+
+def test_any_day_in_a_week_selects_that_week(client):
+    wednesday = slots_of(client.get("/?duration=30&week=2026-10-28"))
+    assert wednesday == slots_of(client.get("/?duration=30&week=2026-10-26"))
+
+
+def test_weeks_outside_the_range_are_clamped(client):
+    first = slots_of(client.get("/?duration=30"))
+    assert slots_of(client.get("/?duration=30&week=2020-01-01")) == first
+    response = client.get("/?duration=30&week=2030-01-01")
+    # Horizon is 30 days from the 19th: the last week is the one of Monday 2026-11-16
+    assert pager(response)["label"] == "Mon 16 Nov – Sun 22 Nov 2026"
+    assert pager(response)["next"] is None
+    assert pager(response)["prev"] == "/?duration=30&week=2026-11-09"
+    assert max(days_of(slots_of(response))) <= "2026-11-18"
+
+
+@pytest.mark.parametrize("value", ["garbage", "", "2026-13-45", "26.10.2026"])
+def test_invalid_week_falls_back_to_the_default(client, value):
+    response = client.get("/", query_string={"duration": 30, "week": value})
+    assert response.status_code == 200
+    assert slots_of(response) == slots_of(client.get("/?duration=30"))
+
+
+def test_default_week_is_the_one_with_the_first_free_slot(client, monkeypatch):
+    # Friday evening: nothing left this week, so the page opens on the next one
+    monkeypatch.setattr(availability, "utcnow", lambda: datetime(2026, 10, 23, 18, 0, tzinfo=UTC))
+    response = client.get("/?duration=30")
+    assert pager(response)["label"] == "Mon 26 Oct – Sun 01 Nov 2026"
+    assert pager(response)["prev"] == "/?duration=30&week=2026-10-19"  # can still go back
+    assert slots_of(response)
+
+
+def test_empty_week_keeps_the_arrows_and_hides_the_form(client, feed: Feed):
+    block_days(feed, "20261026", "20261031")  # Monday to Friday of the second week
+    response = client.get("/?duration=30&week=2026-10-26")
+    assert "no free times this week" in response.text
+    assert not slots_of(response)
+    assert BeautifulSoup(response.data, "html.parser").select_one("form") is None
+    links_ = pager(response)
+    assert links_["prev"]
+    assert links_["next"]
+    # Following the arrows leads to a week with slots again
+    assert slots_of(client.get(pager(response)["next"]))
+
+
+def test_no_slots_at_all_has_no_pager(client, feed: Feed):
+    block_days(feed, "20261001", "20261201")
+    response = client.get("/?duration=30")
+    assert response.status_code == 200
+    assert "no free times for the next 30 days" in response.text
+    assert BeautifulSoup(response.data, "html.parser").select_one("nav[aria-label=Week]") is None
+
+
+def test_booking_from_a_later_week(client, outbox):
+    slot = first_slot_of_week(client, "2026-10-26")
+    assert book(client, slot).status_code == 302
+    assert slot not in slots_of(client.get("/?duration=30&week=2026-10-26"))
+
+
+def first_slot_of_week(client: FlaskClient, week: str) -> str:
+    """First slot offered on the page of a week."""
+    return slots_of(client.get(f"/?duration=30&week={week}"))[0]
+
+
+def test_form_keeps_the_week_when_it_is_shown_again_with_errors(client, outbox):
+    slot = first_slot_of_week(client, "2026-10-26")
+    response = book(client, slot, email="not-an-email", week="2026-10-26")
+    assert response.status_code == 400
+    assert pager(response)["label"] == "Mon 26 Oct – Sun 01 Nov 2026"
+    soup = BeautifulSoup(response.data, "html.parser")
+    assert soup.select_one("input[name=week]")["value"] == "2026-10-26"
+    assert slot in slots_of(response)
+
+
+def test_switching_the_duration_starts_at_the_default_week(client):
+    soup = BeautifulSoup(client.get("/?duration=30&week=2026-10-26").data, "html.parser")
+    href = soup.select_one("nav[aria-label='Meeting length'] a").get("href")
+    assert "week" not in href

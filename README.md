@@ -11,7 +11,7 @@ A small, self-hosted alternative to cal.com for one person: others book a meetin
 - Offers only slots that fit your rules: working hours per weekday (with breaks), the meeting lengths you choose (e.g. 15/30/60 minutes), minimum notice, booking horizon and buffers before and after your meetings.
 - Books instantly. You and the booker both get a calendar invitation (ICS) by email, with a video room (Jitsi) of its own for each meeting and an optional reminder.
 - Both sides get a private link to reschedule or cancel. The booker can only move the meeting into slots that are free under your rules. You can move it anywhere, with a warning if that overlaps with something.
-- Visitors see the times in their own time zone (a few lines of JavaScript; without them, the times are shown in your time zone).
+- Visitors see the times in their own time zone (a few lines of JavaScript; without them, the times are shown in your time zone). Free times are listed one calendar week at a time, with arrows to the previous and next week.
 - Abuse protection: rate limiting, a honeypot field, CSRF protection and a cap on upcoming meetings per email address.
 
 The only thing it stores is the bookings, in SQLite. Everything else is in one YAML file.

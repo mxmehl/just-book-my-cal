@@ -473,3 +473,24 @@ def test_links_stay_the_same_over_several_changes(client, booked, outbox):
     # The original links still work after all changes
     assert client.get(booked.manage).status_code == 200
     assert client.get(booked.admin).status_code == 200
+
+
+def test_manage_page_lists_one_week_with_arrows(client, booked):
+    page = client.get(booked.manage)
+    soup = BeautifulSoup(page.data, "html.parser")
+    nav = soup.select_one("nav[aria-label=Week]")
+    assert nav.select_one("strong").text == "Mon 19 Oct – Sun 25 Oct 2026"
+    assert nav.select_one("a[rel=prev]") is None
+    next_url = nav.select_one("a[rel=next]")["href"]
+    assert next_url.endswith(f"{booked.manage}?week=2026-10-26")
+    assert max(s[:10] for s in slots_of(page)) <= "2026-10-25"
+
+    later = client.get(next_url)
+    assert slots_of(later)
+    assert min(s[:10] for s in slots_of(later)) >= "2026-10-26"
+
+
+def test_booker_can_move_into_a_later_week(client, booked, outbox):
+    later = slots_of(client.get(booked.manage + "?week=2026-10-26"))[0]
+    client.post(booked.manage, data={"action": "reschedule", "slot": later})
+    assert only_booking().start.strftime("%Y-%m-%dT%H:%M:%SZ") == later
