@@ -5,7 +5,7 @@
 use_versions_host_track = false
 
 [tools]
-python = "3.15.0"
+python = "3.15"
 uv = "0.13"
 
 [vars]
