@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.1](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.0...v0.1.1) (2026-10-19)
+
+
+### 🔥 Bug Fixes
+
+* make gunicorn version bind to 0.0.0.0 ([637c7fb](https://github.com/mxmehl/just-book-my-cal/commit/637c7fba5a11dea888a23e26b5011088066491d7))
+* PyPI package name ([f477652](https://github.com/mxmehl/just-book-my-cal/commit/f4776527f97cbebdff996a2e68e59a85ca69a276))
+
+
+### ⚙️ Chores
+
+* **deps:** update dependency python to v3.15.0 ([#2](https://github.com/mxmehl/just-book-my-cal/issues/2)) ([1cd9a66](https://github.com/mxmehl/just-book-my-cal/commit/1cd9a669b868b5a54aa46bfde5898a1fb9758b65))
+* **deps:** update github actions group ([#3](https://github.com/mxmehl/just-book-my-cal/issues/3)) ([c55e59c](https://github.com/mxmehl/just-book-my-cal/commit/c55e59caf93360185940981ac1e37d54b01dd6f1))
+
 ## 0.1.0 (2026-10-19)
 
 
