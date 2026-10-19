@@ -57,6 +57,16 @@ def gunicorn() -> None:
         help="Path to Gunicorn configuration file. Defaults to the one shipped with the package.",
     )
     parser.add_argument(
+        "-b",
+        "--bind",
+        type=str,
+        metavar="HOST:PORT",
+        help=(
+            "Address gunicorn listens on, e.g. 127.0.0.1:5262 to accept only a reverse proxy on "
+            "the same machine. Default: 0.0.0.0:5262 (all interfaces), see gunicorn.conf.py"
+        ),
+    )
+    parser.add_argument(
         "--debug", action="store_true", help="Run in debug mode (may leak sensitive information)"
     )
     parser.add_argument("--version", action="version", version="%(prog)s " + __version__)
@@ -69,6 +79,8 @@ def gunicorn() -> None:
             str(Path(sys.executable).parent / "gunicorn"),
             "-c",
             gunicorn_config_path,
+            # On the command line, so that it wins over "bind" in the config file
+            *(["-b", args.bind] if args.bind else []),
             "justbookmycal.wsgi:main()",
             "-e",
             f"CONFIG_FILE={args.app_config}",

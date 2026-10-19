@@ -63,10 +63,16 @@ Each meeting gets a video link rendered from the `MEETING_URL` template. The def
 Run the app with gunicorn behind a reverse proxy that terminates TLS:
 
 ```sh
-uv run justbookmycal --app-config /path/to/config.yaml   # listens on 127.0.0.1:5262
+uv run justbookmycal --app-config /path/to/config.yaml   # listens on 0.0.0.0:5262
 ```
 
 The bundled gunicorn configuration uses a single worker on purpose: the rate limiter and the feed cache live in memory of the process. Pass your own with `--gunicorn-config` if you need something else.
+
+By default, gunicorn listens on all interfaces (`0.0.0.0:5262`), so that a reverse proxy on the same machine, in another container or on another host can reach it. Only do this where the port is not reachable from the internet except through the proxy: the app has no login, and it trusts the `X-Forwarded-For` header of the proxy (see `TRUSTED_PROXIES` below), so visitors who reach the port directly could fake their IP and escape the rate limit. If the proxy runs on the same machine, restrict the app to localhost with `--bind`:
+
+```sh
+uv run justbookmycal --app-config /path/to/config.yaml --bind 127.0.0.1:5262
+```
 
 An nginx location for it:
 

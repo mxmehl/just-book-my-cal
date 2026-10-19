@@ -4,8 +4,10 @@
 
 """Gunicorn configuration file."""
 
-# Server socket. Binds to localhost: put a reverse proxy with TLS in front of it
-bind = "127.0.0.1:5262"
+# Server socket. All interfaces, so that a reverse proxy in another container or on another host can
+# reach it (as in castmail2list). The app has no login: do not expose this port to the internet
+# directly, only the proxy. For localhost only, start with `--bind 127.0.0.1:5262`
+bind = "0.0.0.0:5262"
 
 # Worker processes
 workers = 1
