@@ -44,7 +44,7 @@ uv run flask slots --duration 30  # slots people could book
 
 ## Configuration
 
-All settings are explained in [config.example.yaml](config.example.yaml), and validated against [a JSON schema](justbookmycal/config_schema.json) on start. Only five keys are required: `SECRET_KEY`, `OWNER_NAME`, `OWNER_EMAIL`, `SYSTEM_EMAIL` and `ICS_FEEDS`.
+All settings are explained in [config.example.yaml](config.example.yaml), and validated against [a JSON schema](justbookmycal/config_schema.json) on start. Only `SECRET_KEY` and `SYSTEM_EMAIL` are always required, plus `OWNER_NAME`, `OWNER_EMAIL` and `ICS_FEEDS` (at the top level, or in every profile, see below).
 
 How your feed is read:
 
@@ -54,6 +54,30 @@ How your feed is read:
 - Bookings made through the app block their time immediately, even if your calendar app has not published the invitation in the feed yet.
 
 Texts: `EVENT_TITLE`, `EVENT_DESCRIPTION`, `EMAIL_BODY_BOOKER` and `EMAIL_BODY_OWNER` are [Jinja2](https://jinja.palletsprojects.com/) templates, so you can use the names of the participants, the message of the booker and conditions like `{% if booker_message %}`. The available variables are listed in the example configuration.
+
+## Multiple profiles
+
+Optionally, one installation can serve several booking pages, for example `/me` and `/it`, each with its own owner, calendars, working hours, meeting lengths, video links and texts. Define them under `PROFILES` in the config:
+
+```yaml
+PROFILES:
+  me: {}
+  it:
+    OWNER_NAME: "Jane Doe (IT support)"
+    ICS_FEEDS: ["https://calendar.example.com/public/jane-it.ics"]
+    WORKING_HOURS:
+      tue: ["10:00-12:00"]
+DEFAULT_PROFILE: me
+```
+
+- **Inheritance:** the top-level settings are the defaults of every profile, and a profile lists only what differs. The overridable settings are listed in the example config. Everything else (SMTP, `SYSTEM_EMAIL`, rate limit, `MAX_UPCOMING_PER_EMAIL`, ...) is shared and rejected inside a profile.
+- **URLs:** a profile is served at `/<name>` (lowercase letters, digits and hyphens; `book`, `manage`, `admin` and `static` are reserved). `DEFAULT_PROFILE` is additionally served at `/`. Without a default, `/` lists all profiles, or shows a short note if you set `ROOT_PAGE: placeholder`.
+- **Bookings block each other:** a meeting booked in any profile makes that time unavailable in all of them, right away. `MAX_UPCOMING_PER_EMAIL` counts across profiles.
+- **Existing links keep working:** a booking remembers its profile, and its private links use that profile's settings for rescheduling and in all later mails. Bookings from before you introduced profiles, or from a profile you removed later, use the top-level settings.
+- **Checking:** `flask busy` and `flask slots` take `--profile`; it is required if there are profiles but no default.
+- **Feeds of all profiles** are loaded when a manage or admin page is opened, because the profile is only known after the lookup. A slow feed of one profile can therefore delay those pages, but not the booking pages of other profiles.
+
+Without `PROFILES`, nothing changes: the app has one booking page at `/`, as before.
 
 ## The invitation
 
@@ -105,7 +129,7 @@ location / {
 ## Known limitations
 
 - Your own copy of a booking can block neighbouring times. When you accept the invitation in your calendar app and that app publishes it in your feed, the event is counted twice (once from the database, once from the feed). This is harmless for new bookings. When a booker moves a meeting, the feed's copy of the old time keeps blocking until the feed shows the change. Calendar apps that keep the invitation's UID (e.g. Thunderbird, Nextcloud) are ignored correctly during rescheduling. Exchange/Outlook assigns its own UID, so the old copy stays in the way until it disappears from your feed.
-- Only one organiser, one language (English) and one set of rules.
+- Only one organiser per profile, and one language (English).
 - Calendar clients differ in how they show invitations. The mails follow the common conventions for Outlook and Thunderbird, but check that they look right in your setup before you rely on them.
 
 ## Development

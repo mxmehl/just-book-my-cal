@@ -20,6 +20,7 @@ from flask import (
     abort,
     current_app,
     flash,
+    g,
     redirect,
     render_template,
     request,
@@ -33,6 +34,7 @@ from wtforms.validators import DataRequired, Email, Length, Regexp
 
 from . import __version__, availability, invite
 from .availability import FeedError
+from .config import profile_config
 from .extensions import db, limiter
 from .models import STATUS_CANCELLED, STATUS_CONFIRMED, Booking, derive_token, hash_token
 
@@ -74,21 +76,38 @@ class BookingForm(FlaskForm):
 @bp.app_context_processor
 def _inject() -> dict[str, str]:
     """Variables for all templates."""
+    cfg = _cfg()
     return {
-        "owner_name": current_app.config["OWNER_NAME"],
-        "timezone_name": current_app.config["TIMEZONE"],
+        "owner_name": cfg["OWNER_NAME"],
+        "timezone_name": cfg["TIMEZONE"],
         "version": __version__,  # of the running release, from the package metadata
     }
 
 
 @bp.before_request
 def _prefetch_feeds() -> None:
-    """Warm the feed cache before any database access (see availability.prefetch)."""
-    try:
-        availability.prefetch(current_app.config)
-    except FeedError as e:
-        # Handled where slots are actually needed, so that e.g. cancelling still works
-        logging.warning("%s", e)
+    """Warm the feed cache before any database access (see availability.prefetch).
+
+    Only the feeds of the requested profile are loaded, so a slow feed of one profile does not
+    delay the pages of the others.
+    """
+    cfg = current_app.config
+    view_args = request.view_args or {}
+    if "slug" not in view_args:
+        # ponytail: manage/admin pages learn their profile only from the database, which must not
+        # be touched before this. So all feeds are warmed here (shared URLs are fetched once).
+        # Ceiling: one slow feed delays those pages; fix by storing the slug in the token URL.
+        slugs = [None, *cfg["PROFILES"]]
+    else:
+        slugs = [view_args["slug"] or cfg["DEFAULT_PROFILE"] or None]
+    for slug in slugs:
+        if slug and slug not in cfg["PROFILES"]:
+            continue  # unknown profile: answered with 404 later
+        try:
+            availability.prefetch(profile_config(cfg, slug))
+        except FeedError as e:
+            # Handled where slots are actually needed, so that e.g. cancelling still works
+            logging.warning("%s", e)
 
 
 # ---------------------------------------------------------------------------------------------
@@ -96,9 +115,74 @@ def _prefetch_feeds() -> None:
 # ---------------------------------------------------------------------------------------------
 
 
+def _select(slug: str | None) -> None:
+    """Make a profile the current one: its settings are what `_cfg()` returns from now on."""
+    g.profile = slug
+    g.cfg = profile_config(current_app.config, slug)
+
+
+@bp.teardown_app_request
+def _forget_profile(_exc: BaseException | None) -> None:
+    """Drop the selected profile when the request ends.
+
+    `g` belongs to the app context, which can outlive a request (e.g. in tests that keep one
+    open), and a stale profile must never leak into the next request.
+    """
+    g.pop("cfg", None)
+    g.pop("profile", None)
+
+
+def _cfg() -> dict[str, Any]:
+    """The settings of the current profile (global settings plus the profile's overrides).
+
+    Outside of a profile (error pages, the root page), these are the settings of the default
+    profile, or the top-level settings if there is none.
+    """
+    if "cfg" not in g:
+        _select(current_app.config["DEFAULT_PROFILE"] or None)
+    return g.cfg
+
+
+def _select_profile(slug: str | None) -> str | None:
+    """Use the profile of the URL: `slug`, or the default profile (if any) for "/" and "/book".
+
+    Returns:
+        The slug of the profile in use; None if the top-level settings are used
+
+    Raises:
+        NotFound: (404) if the slug is not a profile
+    """
+    cfg = current_app.config
+    if slug is None:
+        slug = cfg["DEFAULT_PROFILE"] or None
+    elif slug not in cfg["PROFILES"]:
+        abort(404)
+    _select(slug)
+    return slug
+
+
+def _is_root_menu(slug: str | None) -> bool:
+    """Whether the URL is "/" without a booking page behind it: profiles, but no default."""
+    cfg = current_app.config
+    return slug is None and bool(cfg["PROFILES"]) and not cfg["DEFAULT_PROFILE"]
+
+
+def _use_booking_profile(booking: Booking) -> None:
+    """Use the settings of the profile a booking was made under.
+
+    Old bookings (no profile) and bookings of a profile that was removed from the config use the
+    top-level settings, so that their links keep working.
+    """
+    profile = booking.profile
+    if profile and profile not in current_app.config["PROFILES"]:
+        logging.warning("Booking %s: profile '%s' is not configured any more", booking.uid, profile)
+        profile = None
+    _select(profile)
+
+
 def _tz() -> ZoneInfo:
     """The owner's time zone."""
-    return ZoneInfo(current_app.config["TIMEZONE"])
+    return ZoneInfo(_cfg()["TIMEZONE"])
 
 
 def _parse_slot(value: str) -> datetime | None:
@@ -148,7 +232,7 @@ def _week(slots: list[datetime], now: datetime, make_url: Callable[[date], str])
     """
     tz = _tz()
     first = _monday(now.astimezone(tz).date())
-    last = _monday((now + timedelta(days=current_app.config["HORIZON_DAYS"])).astimezone(tz).date())
+    last = _monday((now + timedelta(days=_cfg()["HORIZON_DAYS"])).astimezone(tz).date())
     try:
         requested = date.fromisoformat(request.values.get("week", ""))
     except ValueError:
@@ -168,7 +252,7 @@ def _week(slots: list[datetime], now: datetime, make_url: Callable[[date], str])
 
 def _valid_duration(value: int | None) -> int:
     """Return the duration if the owner offers it, else answer 400."""
-    if value is None or value not in current_app.config["DURATIONS"]:
+    if value is None or value not in _cfg()["DURATIONS"]:
         abort(400, "This meeting length is not offered.")
     return value
 
@@ -178,7 +262,7 @@ def _new_meeting_url(booker_name: str, start: datetime) -> str:
 
     With the default template this is a room like OwnerName-BookerName-YYYYMMDD-random.
     """
-    cfg = current_app.config
+    cfg = _cfg()
     return invite.render(
         cfg["MEETING_URL"],
         owner=invite.ascii_alnum(cfg["OWNER_NAME"]),
@@ -199,10 +283,11 @@ def _parse_meeting_url(value: str) -> str | None:
 
 
 def _booking_by_token(column: Any, token: str) -> Booking:  # noqa: ANN401
-    """Find a booking by one of its secret tokens, or answer 404."""
+    """Find a booking by one of its secret tokens, or answer 404. Also selects its profile."""
     booking = db.session.scalar(select(Booking).where(column == hash_token(token)))
     if booking is None:
         abort(404, "This link is not valid.")
+    _use_booking_profile(booking)
     return booking
 
 
@@ -222,7 +307,7 @@ def _links(uid: str) -> tuple[str, str]:
 def _notify(booking: Booking, method: str, now: datetime) -> None:
     """Send the invitations, each side with its own private link, and tell the user how it went."""
     manage_url, admin_url = _links(booking.uid)
-    if invite.send_invites(current_app.config, booking, method, now, manage_url, admin_url):
+    if invite.send_invites(_cfg(), booking, method, now, manage_url, admin_url):
         flash("Done. The calendar invitation was sent by email to both of you.", "ok")
         return
     # If the mails fail, the owner would not learn the admin link: the log is the only place left.
@@ -268,15 +353,21 @@ def _cancel(booking: Booking, now: datetime) -> None:
 
 def _render_index(form: BookingForm, duration: int, status: int = 200) -> Reply:
     """Render the booking page with the free slots of a meeting length."""
-    cfg = current_app.config
+    cfg = _cfg()
+    slug = (request.view_args or {}).get("slug")  # as in the URL: None for "/"
     now = availability.utcnow()
     slots = availability.free_slots(cfg, duration, now)
     db.session.rollback()  # release the database lock before rendering
-    week = _week(slots, now, lambda d: url_for("main.index", duration=duration, week=d.isoformat()))
+    week = _week(
+        slots,
+        now,
+        lambda d: url_for("main.index", slug=slug, duration=duration, week=d.isoformat()),
+    )
     return (
         render_template(
             "index.html",
             form=form,
+            slug=slug,
             duration=duration,
             durations=cfg["DURATIONS"],
             week=week,
@@ -286,24 +377,45 @@ def _render_index(form: BookingForm, duration: int, status: int = 200) -> Reply:
     )
 
 
-@bp.get("/")
-def index() -> Reply:
-    """Duration picker and the free slots."""
+def _render_root_menu() -> Reply:
+    """The page at "/" if profiles exist but none is the default: a list or a placeholder."""
+    cfg = current_app.config
+    _select(None)
+    profiles = (
+        [(slug, profile_config(cfg, slug)["OWNER_NAME"]) for slug in cfg["PROFILES"]]
+        if cfg["ROOT_PAGE"] == "list"
+        else []
+    )
+    # owner_name is emptied on purpose: the top-level name belongs to no profile
+    return render_template("profiles.html", profiles=profiles, owner_name="")
+
+
+@bp.get("/", defaults={"slug": None})
+@bp.get("/<slug>")
+def index(slug: str | None) -> Reply:
+    """Duration picker and the free slots of a profile (at "/": of the default profile)."""
+    if _is_root_menu(slug):
+        return _render_root_menu()
+    _select_profile(slug)
     duration = _valid_duration(
-        request.args.get("duration", default=current_app.config["DURATIONS"][0], type=int)
+        request.args.get("duration", default=_cfg()["DURATIONS"][0], type=int)
     )
     return _render_index(BookingForm(duration=duration), duration)
 
 
-@bp.post("/book")
-def book() -> Reply:
+@bp.post("/book", defaults={"slug": None})
+@bp.post("/<slug>/book")
+def book(slug: str | None) -> Reply:
     """Create a booking, if the slot is still free, and send the invitations."""
-    cfg = current_app.config
+    if _is_root_menu(slug):
+        abort(404)
+    profile = _select_profile(slug)
+    cfg = _cfg()
     form = BookingForm()
     if not form.validate_on_submit():
         return _render_index(form, _valid_duration(form.duration.data), 400)
     if form.website.data:  # honeypot filled: a bot. Pretend all is well and do nothing
-        return redirect(url_for("main.index"))
+        return redirect(url_for("main.index", slug=slug))
 
     duration = _valid_duration(form.duration.data)
     start = _parse_slot(form.slot.data or "")
@@ -342,6 +454,7 @@ def book() -> Reply:
         meeting_url=_new_meeting_url(name, start),
         booker_token_hash=hash_token(derive_token(cfg["SECRET_KEY"], uid, "manage")),
         admin_token_hash=hash_token(derive_token(cfg["SECRET_KEY"], uid, "admin")),
+        profile=profile,
     )
     db.session.add(booking)
     db.session.commit()
@@ -358,8 +471,8 @@ def book() -> Reply:
 @bp.get("/manage/<token>")
 def manage(token: str) -> Reply:
     """Details of the meeting, with free slots to move it to and a way to cancel."""
-    cfg = current_app.config
     booking = _booking_by_token(Booking.booker_token_hash, token)
+    cfg = _cfg()  # after the lookup: it selects the booking's profile
     now = availability.utcnow()
     can_change = _is_open(booking, now)
     week = None  # None: the calendar is unavailable right now
@@ -385,8 +498,8 @@ def manage(token: str) -> Reply:
 @bp.post("/manage/<token>")
 def manage_post(token: str) -> Reply:
     """Reschedule into a free slot or cancel."""
-    cfg = current_app.config
     booking = _booking_by_token(Booking.booker_token_hash, token)
+    cfg = _cfg()  # after the lookup: it selects the booking's profile
     now = availability.utcnow()
     url = url_for("main.manage", token=token, _external=True)
     action = request.form.get("action")
@@ -416,10 +529,8 @@ def manage_ics(token: str) -> Response:
     booking = _booking_by_token(Booking.booker_token_hash, token)
     if booking.cancelled:
         abort(404)
-    ics = invite.build_ics(
-        current_app.config, booking, invite.METHOD_REQUEST, availability.utcnow()
-    )
-    filename = invite.ics_filename(current_app.config, booking)
+    ics = invite.build_ics(_cfg(), booking, invite.METHOD_REQUEST, availability.utcnow())
+    filename = invite.ics_filename(_cfg(), booking)
     return Response(
         ics,
         mimetype="text/calendar",
@@ -465,9 +576,7 @@ def _conflicts(booking: Booking, start: datetime, duration: int) -> list[str]:
     """Calendar entries and bookings that overlap with the proposed time, as readable lines."""
     end = start + timedelta(minutes=duration)
     margin = timedelta(days=1)
-    busy = availability.gather_busy(
-        current_app.config, start - margin, end + margin, exclude=booking
-    )
+    busy = availability.gather_busy(_cfg(), start - margin, end + margin, exclude=booking)
     tz = _tz()
     return [
         f"{b_start.astimezone(tz):%a %d %b, %H:%M}-{b_end.astimezone(tz):%H:%M}"

@@ -148,6 +148,7 @@ def gather_busy(
         FeedError: if a feed cannot be loaded
     """
     busy = get_busy(cfg, start, end, exclude_uid=exclude.uid if exclude else None)
+    # No filter by profile on purpose: it is one person, so a booking in any profile blocks all
     query = select(Booking).where(
         Booking.status == STATUS_CONFIRMED,
         Booking.start < end,

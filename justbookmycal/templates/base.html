@@ -8,7 +8,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex">
-  <title>{% block title %}Book a meeting{% endblock %} · {{ owner_name }}</title>
+  <title>{% block title %}Book a meeting{% endblock %}{% if owner_name %} · {{ owner_name }}{% endif %}</title>
   <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
   <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png" sizes="180x180">
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon.png') }}">

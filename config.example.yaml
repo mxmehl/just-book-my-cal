@@ -85,6 +85,34 @@ REMINDER_MINUTES: 15
 # EMAIL_BODY_BOOKER: "..."
 # EMAIL_BODY_OWNER: "..."
 
+# --- Profiles (optional) -----------------------------------------------------------------------
+# Several booking pages in one installation, e.g. /me and /it, each with its own owner, calendars
+# and rules. Everything above is the default for all profiles; a profile only lists what differs.
+# These settings can be overridden per profile: OWNER_NAME, OWNER_EMAIL, TIMEZONE, ICS_FEEDS,
+# DURATIONS, WORKING_HOURS, SLOT_STEP_MINUTES, MIN_NOTICE_HOURS, HORIZON_DAYS,
+# BUFFER_MINUTES_BEFORE, BUFFER_MINUTES_AFTER, MEETING_URL, REMINDER_MINUTES, EVENT_TITLE,
+# EVENT_DESCRIPTION, EMAIL_BODY_BOOKER, EMAIL_BODY_OWNER and SYSTEM_NAME. All other settings (SMTP,
+# SYSTEM_EMAIL, rate limit, MAX_UPCOMING_PER_EMAIL, ...) are shared. If every profile sets
+# OWNER_NAME, OWNER_EMAIL and ICS_FEEDS, you can leave them out at the top level.
+# A profile name may contain lowercase letters, digits and hyphens. "book", "manage", "admin" and
+# "static" are reserved. Meetings booked in any profile block the time in all of them.
+# PROFILES:
+#   me: {}   # everything as above
+#   it:
+#     OWNER_NAME: "Jane Doe (IT support)"
+#     ICS_FEEDS:
+#       - "https://calendar.example.com/public/jane-it.ics"
+#     DURATIONS: [30]
+#     WORKING_HOURS:
+#       tue: ["10:00-12:00"]
+#       thu: ["10:00-12:00"]
+#     MEETING_URL: "https://meet.example.com/it-support"
+# Profile that is also served at "/". Default: "" (none)
+# DEFAULT_PROFILE: "me"
+# What "/" shows if there are profiles but no DEFAULT_PROFILE: "list" (links to all profiles) or
+# "placeholder" (a short note, nothing else). Default: "list"
+# ROOT_PAGE: "list"
+
 # --- Email -------------------------------------------------------------------------------------
 # REQUIRED. Sender and ORGANIZER of the invitations, e.g. a noreply address. You and the booker are
 # attendees. Using a system address instead of your own makes Outlook show a normal invitation.

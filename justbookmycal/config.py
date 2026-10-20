@@ -7,6 +7,7 @@
 import json
 import logging
 import re
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, ClassVar
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -20,6 +21,30 @@ from platformdirs import user_config_path
 
 APP_NAME = "justbookmycal"
 DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+
+# Settings a profile may override; all others are global. Keep in sync with config_schema.json.
+PROFILE_KEYS = (
+    "OWNER_NAME",
+    "OWNER_EMAIL",
+    "TIMEZONE",
+    "ICS_FEEDS",
+    "DURATIONS",
+    "WORKING_HOURS",
+    "SLOT_STEP_MINUTES",
+    "MIN_NOTICE_HOURS",
+    "HORIZON_DAYS",
+    "BUFFER_MINUTES_BEFORE",
+    "BUFFER_MINUTES_AFTER",
+    "MEETING_URL",
+    "REMINDER_MINUTES",
+    "EVENT_TITLE",
+    "EVENT_DESCRIPTION",
+    "EMAIL_BODY_BOOKER",
+    "EMAIL_BODY_OWNER",
+    "SYSTEM_NAME",
+)
+# Without these, there is nobody to book: each profile needs them, directly or by inheritance
+REQUIRED_PROFILE_KEYS = ("OWNER_NAME", "OWNER_EMAIL", "ICS_FEEDS")
 
 # Variables of the MEETING_URL template, with an example of each (used to check the template)
 MEETING_URL_SAMPLE = {
@@ -74,6 +99,21 @@ def _load_config_schema() -> dict:
 
 
 CONFIG_SCHEMA = _load_config_schema()
+
+
+def profile_config(cfg: Mapping[str, Any], slug: str | None) -> dict[str, Any]:
+    """The settings of a profile: the global config with the profile's overrides on top.
+
+    Built on every call from the live config, so later changes to `cfg` are seen.
+
+    Args:
+        cfg: the app config
+        slug: the profile, or None for the top-level settings alone
+
+    Returns:
+        A new dict, safe to pass to `availability` and `invite` in place of the app config
+    """
+    return {**cfg, **cfg.get("PROFILES", {})[slug]} if slug else dict(cfg)
 
 
 def default_config_path() -> str:
@@ -147,6 +187,11 @@ class AppConfig:  # pylint: disable=too-few-public-methods
     # Rate limit for all POST requests (per client IP)
     RATE_LIMIT_POST: str = "10 per hour"
 
+    # Profiles: slug -> overrides of PROFILE_KEYS. Everything else is inherited from the top level.
+    PROFILES: ClassVar[dict[str, dict[str, Any]]] = {}
+    DEFAULT_PROFILE: str = ""  # Slug of the profile that is also served at "/"
+    ROOT_PAGE: str = "list"  # What "/" shows without a default profile: "list" or "placeholder"
+
     @classmethod
     def validate_config_schema(cls, cfg: dict, schema: dict) -> None:
         """Validate the config against a JSON schema."""
@@ -179,6 +224,33 @@ class AppConfig:  # pylint: disable=too-few-public-methods
                     raise ValueError(msg)
 
         cls._validate_templates(cfg)
+
+    @classmethod
+    def validate_profiles(cls, cfg: dict) -> None:
+        """Check the profiles of a loaded config: semantics of each, default, required settings.
+
+        Raises:
+            ValueError: with a readable message if something is invalid or missing
+        """
+        profiles = cfg.get("PROFILES", {})
+        default = cfg.get("DEFAULT_PROFILE", cls.DEFAULT_PROFILE)
+        if default and default not in profiles:
+            msg = f"DEFAULT_PROFILE '{default}' is not defined in PROFILES"
+            raise ValueError(msg)
+
+        for slug, overrides in profiles.items():
+            try:
+                cls.validate_semantics(overrides)
+            except ValueError as e:  # noqa: PERF203 (only on the way out: names the profile)
+                msg = f"Profile '{slug}': {e}"
+                raise ValueError(msg) from None
+        for slug in profiles or [None]:
+            merged = profile_config(cfg, slug)
+            for key in REQUIRED_PROFILE_KEYS:
+                if not merged.get(key):
+                    where = f"profile '{slug}'" if slug else "the config"
+                    msg = f"{key} must be set in {where}, or at the top level"
+                    raise ValueError(msg)
 
     @classmethod
     def _validate_templates(cls, cfg: dict) -> None:
@@ -229,6 +301,7 @@ class AppConfig:  # pylint: disable=too-few-public-methods
             raise
         cls.validate_config_schema(data, CONFIG_SCHEMA)
         cls.validate_semantics(data)
+        cls.validate_profiles(data)
         return data
 
     @classmethod
