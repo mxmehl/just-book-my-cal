@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.4...v0.2.0) (2026-10-20)
+
+
+### 🚀 New Features
+
+* enable booking profiles that may inherit default settings ([#9](https://github.com/mxmehl/just-book-my-cal/issues/9)) ([4102f54](https://github.com/mxmehl/just-book-my-cal/commit/4102f54b6e3228e8deee768e28a15c77ecc76c34))
+
 ## [0.1.4](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.3...v0.1.4) (2026-10-19)
 
 
