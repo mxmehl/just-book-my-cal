@@ -3,7 +3,7 @@
   "title": "just-book-my-cal configuration",
   "type": "object",
   "additionalProperties": false,
-  "required": ["SECRET_KEY", "OWNER_NAME", "OWNER_EMAIL", "SYSTEM_EMAIL", "ICS_FEEDS"],
+  "required": ["SECRET_KEY", "SYSTEM_EMAIL"],
   "properties": {
     "DATABASE_URI": { "type": "string" },
     "SECRET_KEY": { "type": "string", "minLength": 32 },
@@ -51,6 +51,40 @@
     "SMTP_USER": { "type": "string" },
     "SMTP_PASS": { "type": "string" },
     "SMTP_STARTTLS": { "type": "boolean" },
-    "RATE_LIMIT_POST": { "type": "string", "minLength": 1 }
+    "RATE_LIMIT_POST": { "type": "string", "minLength": 1 },
+    "DEFAULT_PROFILE": { "type": "string" },
+    "ROOT_PAGE": { "enum": ["list", "placeholder"] },
+    "PROFILES": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9][a-z0-9-]*$",
+        "maxLength": 64,
+        "not": { "enum": ["book", "manage", "admin", "static"] }
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "OWNER_NAME": { "$ref": "#/properties/OWNER_NAME" },
+          "OWNER_EMAIL": { "$ref": "#/properties/OWNER_EMAIL" },
+          "TIMEZONE": { "$ref": "#/properties/TIMEZONE" },
+          "ICS_FEEDS": { "$ref": "#/properties/ICS_FEEDS" },
+          "DURATIONS": { "$ref": "#/properties/DURATIONS" },
+          "WORKING_HOURS": { "$ref": "#/properties/WORKING_HOURS" },
+          "SLOT_STEP_MINUTES": { "$ref": "#/properties/SLOT_STEP_MINUTES" },
+          "MIN_NOTICE_HOURS": { "$ref": "#/properties/MIN_NOTICE_HOURS" },
+          "HORIZON_DAYS": { "$ref": "#/properties/HORIZON_DAYS" },
+          "BUFFER_MINUTES_BEFORE": { "$ref": "#/properties/BUFFER_MINUTES_BEFORE" },
+          "BUFFER_MINUTES_AFTER": { "$ref": "#/properties/BUFFER_MINUTES_AFTER" },
+          "MEETING_URL": { "$ref": "#/properties/MEETING_URL" },
+          "REMINDER_MINUTES": { "$ref": "#/properties/REMINDER_MINUTES" },
+          "EVENT_TITLE": { "$ref": "#/properties/EVENT_TITLE" },
+          "EVENT_DESCRIPTION": { "$ref": "#/properties/EVENT_DESCRIPTION" },
+          "EMAIL_BODY_BOOKER": { "$ref": "#/properties/EMAIL_BODY_BOOKER" },
+          "EMAIL_BODY_OWNER": { "$ref": "#/properties/EMAIL_BODY_OWNER" },
+          "SYSTEM_NAME": { "$ref": "#/properties/SYSTEM_NAME" }
+        }
+      }
+    }
   }
 }

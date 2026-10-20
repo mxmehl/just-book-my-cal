@@ -1,0 +1,17 @@
+{#
+  SPDX-FileCopyrightText: 2026 Max Mehl <https://mehl.mx>
+  SPDX-License-Identifier: Apache-2.0
+#}
+{% extends "base.html" %}
+{% block content %}
+{% if profiles %}
+<h1>Book a meeting</h1>
+<ul>
+  {% for slug, name in profiles %}
+    <li><a href="{{ url_for('main.index', slug=slug) }}">Book a meeting with {{ name }}</a></li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>There is no booking page here.</p>
+{% endif %}
+{% endblock %}

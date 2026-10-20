@@ -35,7 +35,9 @@ uv run justbookmycal-cli -c config.yaml --debug       # run the dev server (copy
 | Extensions, SQLite locking     | `justbookmycal/extensions.py`    |
 | Tests (in-memory SQLite)       | `tests/`                         |
 
-Flow: `GET /` → `availability.free_slots()` (feeds + DB bookings → `compute_slots()`, a pure function) → `POST /book` re-checks the slot inside one DB transaction, inserts, commits, then `invite.send_invites()` → redirect to `/manage/<token>`. `/manage/<token>` (booker) and `/admin/<token>` (owner) reschedule or cancel; every change commits first and then sends mails, so a mail failure never loses a change.
+Flow: `GET /` (or `/<profile>`) → `availability.free_slots()` (feeds + DB bookings → `compute_slots()`, a pure function) → `POST /book` (or `/<profile>/book`) re-checks the slot inside one DB transaction, inserts, commits, then `invite.send_invites()` → redirect to `/manage/<token>`. `/manage/<token>` (booker) and `/admin/<token>` (owner) reschedule or cancel; every change commits first and then sends mails, so a mail failure never loses a change.
+
+Profiles (optional, `PROFILES` in the config): top-level settings are inherited by every profile, `config.profile_config()` merges them per request. `Booking.profile` remembers the profile (NULL: top-level settings), and `/manage` and `/admin` select it from the booking. Without a default profile, `/` renders `templates/profiles.html` (list or placeholder, `ROOT_PAGE`).
 
 ## Conventions
 
@@ -43,7 +45,7 @@ Flow: `GET /` → `availability.free_slots()` (feeds + DB bookings → `compute_
 - **Type annotations:** Required; checked by `ty`. Scope: `justbookmycal/` (migrations excluded).
 - **Line length:** 100 characters.
 - **REUSE:** Every new file needs an SPDX header (or a `REUSE.toml` annotation). Run `uv run reuse lint` to verify.
-- **Config:** A new setting needs an entry in `config_schema.json`, a default in `config.py`, a documented example in `config.example.yaml`, and a mention in the README if users must know about it.
+- **Config:** A new setting needs an entry in `config_schema.json`, a default in `config.py`, a documented example in `config.example.yaml`, and a mention in the README if users must know about it. If it can differ per profile, also add it to `PROFILE_KEYS` and to the schema's `PROFILES` properties (a test checks that they match).
 - **DB migrations:** Any schema change requires a new Alembic migration (`uv run justbookmycal-cli -c config.yaml --db-migrate "message"`). Migrations must not import application code.
 - **Commits:** Conventional commits (`feat:`, `fix:`, `docs:` …); release-please builds the changelog from them.
 - **Conservative changes:** Prefer minimal, well-tested edits. Mark deliberate shortcuts with a `ponytail:` comment that names the ceiling and the upgrade path.
@@ -56,6 +58,7 @@ Flow: `GET /` → `availability.free_slots()` (feeds + DB bookings → `compute_
 - **Flash messages in tests:** Follow the redirect after each POST so the flash is consumed; otherwise the next page shows stale messages.
 - **Time in tests:** `availability.utcnow` and `availability._download` are replaced by the autouse `feed` fixture in `tests/conftest.py`; use `NOW` (Monday 2026-10-19 06:00 UTC) and `tests/fixtures/busy.ics`.
 - **Links in mails:** The booker/admin tokens are derived from `SECRET_KEY` and the booking's UID (`models.derive_token`), so `views._links()` can rebuild both links at any time and every mail carries its recipient's link. Only hashes are stored, for lookup. Never put the other side's link into a mail.
+- **Settings via `_cfg()`:** In `views.py`, read profile-level settings (owner, time zone, rules, texts) with `_cfg()`, never `current_app.config` directly, and pass `_cfg()` to `availability`/`invite`. Global settings (`SECRET_KEY`, SMTP, ...) are the same in both. `_booking_by_token()` selects the booking's profile, so call `_cfg()` only after it. The selection lives in `g` and is cleared at the end of each request.
 - **Macros need context:** Templates import `macros.html` `with context`, otherwise `timezone_name` is empty.
 - **mise:** In a fresh clone `mise` asks to trust `mise.toml` (`mise trust`) before `uv` shims work.
 

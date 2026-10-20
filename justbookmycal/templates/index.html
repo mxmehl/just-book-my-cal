@@ -10,7 +10,7 @@
 <nav aria-label="Meeting length">
   <ul class="durations">
     {% for d in durations %}
-      <li><a href="{{ url_for('main.index', duration=d) }}"{% if d == duration %} aria-current="page"{% endif %}>{{ d }} minutes</a></li>
+      <li><a href="{{ url_for('main.index', slug=slug, duration=d) }}"{% if d == duration %} aria-current="page"{% endif %}>{{ d }} minutes</a></li>
     {% endfor %}
   </ul>
 </nav>
@@ -18,7 +18,7 @@
 {% if week.has_slots %}
 {{ week_nav(week) }}
 {% if week.days %}
-<form method="post" action="{{ url_for('main.book') }}">
+<form method="post" action="{{ url_for('main.book', slug=slug) }}">
   {{ form.csrf_token }}
   <input type="hidden" name="duration" value="{{ duration }}">
   <input type="hidden" name="week" value="{{ request.values.get('week', '') }}">

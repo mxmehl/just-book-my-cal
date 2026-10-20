@@ -82,6 +82,8 @@ class Booking(db.Model):  # type: ignore[ty:unsupported-base]
     status: Mapped[str] = mapped_column(String(20), nullable=False, default=STATUS_CONFIRMED)
     booker_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     admin_token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
+    # Slug of the profile it was booked under; NULL for bookings from before profiles existed
+    profile: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     def __init__(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Apply the defaults at construction, so that they also exist before the first flush."""

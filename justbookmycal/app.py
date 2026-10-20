@@ -20,7 +20,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 
 from . import __version__, availability
 from .availability import FeedError
-from .config import AppConfig, default_config_path, default_database_uri
+from .config import AppConfig, default_config_path, default_database_uri, profile_config
 from .extensions import db, limiter
 from .views import bp
 
@@ -67,24 +67,44 @@ def _register_error_handlers(app: Flask) -> None:
 def _register_cli(app: Flask) -> None:
     """Commands to check the configuration against the real feeds: `flask busy`, `flask slots`."""
 
+    def settings(profile: str | None) -> dict:
+        """The settings to check: of the given profile, else of the default one (or top level)."""
+        cfg = app.config
+        if profile and profile not in cfg["PROFILES"]:
+            known = ", ".join(cfg["PROFILES"]) or "none configured"
+            msg = f"unknown profile '{profile}' (known: {known})"
+            raise click.BadParameter(msg, param_hint="--profile")
+        if not profile and cfg["PROFILES"] and not cfg["DEFAULT_PROFILE"]:
+            msg = f"there is no default profile, choose one of: {', '.join(cfg['PROFILES'])}"
+            raise click.BadParameter(msg, param_hint="--profile")
+        return profile_config(cfg, profile or cfg["DEFAULT_PROFILE"] or None)
+
+    profile_option = click.option(
+        "--profile", help="Profile to check (default: DEFAULT_PROFILE, or the top-level settings)"
+    )
+
     @app.cli.command("busy")
     @click.option("--days", default=7, show_default=True, help="How many days to look ahead")
-    def busy_command(days: int) -> None:
+    @profile_option
+    def busy_command(days: int, profile: str | None) -> None:
         """Print the busy blocks found in the calendar feeds."""
+        cfg = settings(profile)
         now = availability.utcnow()
-        tz = availability.Rules.from_config(app.config).tz
+        tz = availability.Rules.from_config(cfg).tz
         for start, end, uid in sorted(
-            availability.gather_busy(app.config, now, now + timedelta(days=days))
+            availability.gather_busy(cfg, now, now + timedelta(days=days))
         ):
             fmt = "%a %Y-%m-%d %H:%M"
             click.echo(f"{start.astimezone(tz):{fmt}} - {end.astimezone(tz):%H:%M}  {uid}")
 
     @app.cli.command("slots")
     @click.option("--duration", default=30, show_default=True, help="Meeting length in minutes")
-    def slots_command(duration: int) -> None:
+    @profile_option
+    def slots_command(duration: int, profile: str | None) -> None:
         """Print the bookable slots for a meeting length."""
-        tz = availability.Rules.from_config(app.config).tz
-        for slot in availability.free_slots(app.config, duration, availability.utcnow()):
+        cfg = settings(profile)
+        tz = availability.Rules.from_config(cfg).tz
+        for slot in availability.free_slots(cfg, duration, availability.utcnow()):
             click.echo(f"{slot.astimezone(tz):%a %Y-%m-%d %H:%M %Z}")
 
 
