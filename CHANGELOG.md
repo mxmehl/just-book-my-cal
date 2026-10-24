@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/mxmehl/just-book-my-cal/compare/v0.2.0...v0.2.1) (2026-10-24)
+
+
+### ⚙️ Chores
+
+* **deps:** update pypa/gh-action-pypi-publish action to v1.14.3 ([#11](https://github.com/mxmehl/just-book-my-cal/issues/11)) ([c8378e2](https://github.com/mxmehl/just-book-my-cal/commit/c8378e2e76c3860f78a64a30fcc52ac454cd433f))
+
 ## [0.2.0](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.4...v0.2.0) (2026-10-20)
 
 
