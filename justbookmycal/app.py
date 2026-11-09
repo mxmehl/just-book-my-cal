@@ -146,9 +146,7 @@ def create_app(
 
     # Trust headers from the reverse proxy, so rate limiting sees the real client IP
     if hops := app.config["TRUSTED_PROXIES"]:
-        app.wsgi_app = ProxyFix(  # type: ignore[ty:invalid-assignment]
-            app.wsgi_app, x_for=hops, x_proto=hops, x_host=hops, x_prefix=hops
-        )
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=hops, x_prefix=hops)
 
     app.config.update(
         SESSION_COOKIE_HTTPONLY=True,
