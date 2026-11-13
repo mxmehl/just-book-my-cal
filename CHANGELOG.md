@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.2.1](https://github.com/mxmehl/just-book-my-cal/compare/v0.2.0...v0.2.1) (2026-11-13)
+
+
+### 🔥 Bug Fixes
+
+* **deps:** update dependency gunicorn to v27 ([#21](https://github.com/mxmehl/just-book-my-cal/issues/21)) ([4378992](https://github.com/mxmehl/just-book-my-cal/commit/4378992362ad6ec172d2926f2ca993a04330343c))
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#15](https://github.com/mxmehl/just-book-my-cal/issues/15)) ([7cb83f0](https://github.com/mxmehl/just-book-my-cal/commit/7cb83f08fafa2b214af9db61c36f39d09e60cb98))
+* **deps:** lock file maintenance ([#18](https://github.com/mxmehl/just-book-my-cal/issues/18)) ([acbbf68](https://github.com/mxmehl/just-book-my-cal/commit/acbbf68c9f8b53d7fa3828d384da0e68d530ad27))
+* **deps:** lock file maintenance ([#20](https://github.com/mxmehl/just-book-my-cal/issues/20)) ([ca305ef](https://github.com/mxmehl/just-book-my-cal/commit/ca305ef9bbc8c818c0cc73730dbf3479850a0410))
+* **deps:** update astral-sh/setup-uv action to v10.3.1 ([#13](https://github.com/mxmehl/just-book-my-cal/issues/13)) ([399d52c](https://github.com/mxmehl/just-book-my-cal/commit/399d52cfaa35d5d7010c8fafe4a43674d7ec98f3))
+* **deps:** update astral-sh/setup-uv action to v10.3.3 ([#17](https://github.com/mxmehl/just-book-my-cal/issues/17)) ([1bddfec](https://github.com/mxmehl/just-book-my-cal/commit/1bddfec548976e04c2344043637bec85d6a607f6))
+* **deps:** update github actions group ([#14](https://github.com/mxmehl/just-book-my-cal/issues/14)) ([a495665](https://github.com/mxmehl/just-book-my-cal/commit/a4956653223cfb6e92f01ace25629e48ad60ff32))
+* **deps:** update pypa/gh-action-pypi-publish action to v1.14.3 ([#11](https://github.com/mxmehl/just-book-my-cal/issues/11)) ([c8378e2](https://github.com/mxmehl/just-book-my-cal/commit/c8378e2e76c3860f78a64a30fcc52ac454cd433f))
+* **deps:** update zizmorcore/zizmor-action action to v0.8.0 ([#16](https://github.com/mxmehl/just-book-my-cal/issues/16)) ([c890b79](https://github.com/mxmehl/just-book-my-cal/commit/c890b79ebe91d4a4c9b584194f0cfbf890f4e628))
+* **deps:** update zizmorcore/zizmor-action action to v0.8.1 ([#19](https://github.com/mxmehl/just-book-my-cal/issues/19)) ([18d9ccd](https://github.com/mxmehl/just-book-my-cal/commit/18d9ccdd60144f9a14d1ecf9231b962a074d3782))
+
 ## [0.2.0](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.4...v0.2.0) (2026-10-20)
 
 
