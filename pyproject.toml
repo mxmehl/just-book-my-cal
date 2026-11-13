@@ -36,7 +36,7 @@ dependencies = [
     "recurring-ical-events>=3.8.0,<4",
     "pyyaml>=6.0.1,<7",
     "jsonschema>=4.25.1,<5",
-    "gunicorn>=26,<27",
+    "gunicorn>=27,<28",
     "platformdirs>=4.5.0,<5",
 ]
 
