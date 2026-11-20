@@ -4,7 +4,7 @@
 
 """Tests for the booker's page (/manage/<token>) and the owner's page (/admin/<token>)."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 
 import icalendar
@@ -18,8 +18,6 @@ from justbookmycal.models import Booking, hash_token
 
 from .conftest import FIXTURES, NOW, Feed
 from .test_views import book, bookings, links, slot_at, slots_of
-
-UTC = timezone.utc
 
 
 class Booked:

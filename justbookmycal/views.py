@@ -9,7 +9,7 @@ import re
 import secrets
 import uuid
 from collections.abc import Callable, Mapping
-from datetime import date, datetime, time, timedelta, timezone
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
@@ -188,10 +188,10 @@ def _tz() -> ZoneInfo:
 def _parse_slot(value: str) -> datetime | None:
     """Parse a slot value as posted by the form; None if it is not an aware datetime."""
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError:
         return None
-    return parsed.astimezone(timezone.utc) if parsed.tzinfo else None
+    return parsed.astimezone(UTC) if parsed.tzinfo else None
 
 
 def _days(slots: list[datetime]) -> list[dict[str, Any]]:
@@ -598,7 +598,7 @@ def _parse_admin_time(form: Mapping[str, str]) -> tuple[datetime, int] | None:
         return None
     if not MIN_ADMIN_DURATION <= duration <= MAX_ADMIN_DURATION:
         return None
-    return local.astimezone(timezone.utc), duration
+    return local.astimezone(UTC), duration
 
 
 @bp.get("/admin/<token>")

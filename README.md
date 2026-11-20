@@ -23,7 +23,7 @@ The only thing it stores is the bookings, in SQLite. Everything else is in one Y
 
 ## Quick start
 
-You need [uv](https://docs.astral.sh/uv/) and Python 3.10 or newer.
+You need [uv](https://docs.astral.sh/uv/) and Python 3.11 or newer.
 
 ```sh
 uv sync --no-dev

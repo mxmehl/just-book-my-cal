@@ -254,7 +254,7 @@ def test_manage_and_admin_use_the_profile_of_the_booking(pclient, outbox):
     assert heading(page) == "Your meeting with Max IT"
     offered = slots_of(page)
     assert slot_at(19, 14, 0) in offered
-    assert all(datetime.fromisoformat(s.replace("Z", "+00:00")).weekday() == 0 for s in offered)
+    assert all(datetime.fromisoformat(s).weekday() == 0 for s in offered)
 
     assert "Times are in UTC" in pclient.get(found["admin"]).text
 

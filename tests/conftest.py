@@ -4,7 +4,7 @@
 
 """Pytest fixtures: an app on an in-memory database, a fake calendar feed and a fake outbox."""
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from email.message import EmailMessage
 from pathlib import Path
 
@@ -18,7 +18,7 @@ from justbookmycal.extensions import db
 
 FIXTURES = Path(__file__).parent / "fixtures"
 # Monday 08:00 in Berlin (CEST). The clocks go back on Sunday 2026-10-25.
-NOW = datetime(2026, 10, 19, 6, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 10, 19, 6, 0, tzinfo=UTC)
 
 TEST_CONFIG = {
     "TESTING": True,
