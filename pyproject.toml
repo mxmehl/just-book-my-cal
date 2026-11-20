@@ -7,17 +7,17 @@ name = "justbookmycal"
 version = "0.2.0"
 description = "Simple, self-hostable booking page: let others book meetings in the free slots of your ICS calendar feed."
 authors = [{ name = "Max Mehl", email = "mail@mehl.mx" }]
-requires-python = ">=3.10,<4"
+requires-python = ">=3.11,<4"
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "LICENSES/*"]
 keywords = ["calendar", "booking", "scheduling", "flask", "ics", "cal.com"]
 classifiers = [
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Framework :: Flask",
     "Operating System :: OS Independent",
     "Topic :: Internet :: WWW/HTTP :: WSGI :: Application",
