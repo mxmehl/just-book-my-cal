@@ -5,7 +5,7 @@
 """Tests for the public booking page and the booking POST."""
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from email.message import EmailMessage
 from urllib.error import URLError
 
@@ -21,8 +21,6 @@ from justbookmycal.extensions import db
 from justbookmycal.models import Booking, hash_token
 
 from .conftest import FIXTURES, NOW, TEST_CONFIG, Feed
-
-UTC = timezone.utc
 
 
 def slots_of(response) -> list[str]:
@@ -148,7 +146,7 @@ def test_booking_is_saved_and_both_get_an_invitation(client, outbox):
 
     assert response.status_code == 302
     [booking] = bookings()
-    assert booking.start == datetime.fromisoformat(slot.replace("Z", "+00:00"))
+    assert booking.start == datetime.fromisoformat(slot)
     assert (booking.duration, booking.name, booking.email) == (30, "Jane Doe", "jane@example.com")
     assert booking.message == "Let's talk about the project"
     assert (booking.sequence, booking.status) == (0, "confirmed")

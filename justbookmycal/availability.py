@@ -9,7 +9,7 @@ import time
 import urllib.request
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 from datetime import time as dtime
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -39,7 +39,7 @@ class FeedError(Exception):
 
 def utcnow() -> datetime:
     """Return the current time (UTC). A function of its own so tests can replace it."""
-    return datetime.now(tz=timezone.utc)
+    return datetime.now(tz=UTC)
 
 
 def _download(url: str, timeout: int) -> bytes:
@@ -129,7 +129,7 @@ def get_busy(
             ev_start, ev_end = _to_datetime(event.start, tz), _to_datetime(event.end, tz)
             if ev_end <= ev_start:  # zero-length events (reminders etc.) block nothing
                 continue
-            busy.append((ev_start.astimezone(timezone.utc), ev_end.astimezone(timezone.utc), uid))
+            busy.append((ev_start.astimezone(UTC), ev_end.astimezone(UTC), uid))
     return busy
 
 
@@ -214,8 +214,8 @@ def compute_slots(rules: Rules, duration: int, busy: list[Busy], now: datetime) 
     last_day = latest.astimezone(rules.tz).date()
     while day <= last_day:
         for window_start, window_end in rules.hours.get(day.weekday(), []):
-            slot = datetime.combine(day, window_start, tzinfo=rules.tz).astimezone(timezone.utc)
-            end = datetime.combine(day, window_end, tzinfo=rules.tz).astimezone(timezone.utc)
+            slot = datetime.combine(day, window_start, tzinfo=rules.tz).astimezone(UTC)
+            end = datetime.combine(day, window_end, tzinfo=rules.tz).astimezone(UTC)
             while slot + length <= end:
                 # The meeting plus its buffers must not touch any busy block
                 guarded_start, guarded_end = (

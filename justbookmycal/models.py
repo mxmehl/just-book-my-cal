@@ -7,7 +7,7 @@
 import base64
 import hashlib
 import hmac
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import DateTime, Dialect, Index, Integer, String, Text
@@ -33,11 +33,11 @@ class UTCDateTime(TypeDecorator):
         if value.tzinfo is None:
             msg = "Naive datetime given, expected timezone-aware"
             raise ValueError(msg)
-        return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value.astimezone(UTC).replace(tzinfo=None)
 
     def process_result_value(self, value: datetime | None, dialect: Dialect) -> datetime | None:  # noqa: ARG002
         """Attach UTC to what was read."""
-        return None if value is None else value.replace(tzinfo=timezone.utc)
+        return None if value is None else value.replace(tzinfo=UTC)
 
 
 def derive_token(secret_key: str, uid: str, kind: str) -> str:

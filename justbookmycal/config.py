@@ -241,7 +241,7 @@ class AppConfig:  # pylint: disable=too-few-public-methods
         for slug, overrides in profiles.items():
             try:
                 cls.validate_semantics(overrides)
-            except ValueError as e:  # noqa: PERF203 (only on the way out: names the profile)
+            except ValueError as e:
                 msg = f"Profile '{slug}': {e}"
                 raise ValueError(msg) from None
         for slug in profiles or [None]:

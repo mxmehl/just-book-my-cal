@@ -4,7 +4,7 @@
 
 """Tests for feed parsing and the slot engine."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from urllib.error import URLError
 from zoneinfo import ZoneInfo
 
@@ -17,7 +17,6 @@ from justbookmycal.config import AppConfig
 from .conftest import FIXTURES, NOW, TEST_CONFIG, Feed
 
 BERLIN = ZoneInfo("Europe/Berlin")
-UTC = timezone.utc
 
 
 def cfg(**changes) -> dict:

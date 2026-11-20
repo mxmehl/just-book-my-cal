@@ -5,7 +5,7 @@
 """Tests for the invitation: ICS content, MIME structure, templates and SMTP."""
 
 import smtplib
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import icalendar
 import pytest
@@ -14,8 +14,6 @@ from justbookmycal import invite
 from justbookmycal.models import Booking
 
 from .conftest import NOW, TEST_CONFIG
-
-UTC = timezone.utc
 
 CFG = {
     **TEST_CONFIG,
