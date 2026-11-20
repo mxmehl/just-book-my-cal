@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.3.0](https://github.com/mxmehl/just-book-my-cal/compare/v0.2.0...v0.3.0) (2026-11-20)
+
+
+### 🚀 New Features
+
+* drop support for Python 3.10, add Python 3.15 ([#23](https://github.com/mxmehl/just-book-my-cal/issues/23)) ([bc1d39a](https://github.com/mxmehl/just-book-my-cal/commit/bc1d39af5eed22df4684cbd63cdf930c1ae40880))
+
+
+### 🔥 Bug Fixes
+
+* **deps:** ensure recent 3.11 patch release to fix soupsieve vulnerability ([486760e](https://github.com/mxmehl/just-book-my-cal/commit/486760e19060f4abc3ac977e747d2b6c221084ff))
+* **deps:** update dependency gunicorn to v27 ([#21](https://github.com/mxmehl/just-book-my-cal/issues/21)) ([4378992](https://github.com/mxmehl/just-book-my-cal/commit/4378992362ad6ec172d2926f2ca993a04330343c))
+
+
+### 📚 Documentation
+
+* mention Python 3.15 in AGENTS.md ([f239aeb](https://github.com/mxmehl/just-book-my-cal/commit/f239aebc7619ba32de9c0f10b2909f49447169bd))
+
+
+### ⚙️ Chores
+
+* **deps:** lock file maintenance ([#15](https://github.com/mxmehl/just-book-my-cal/issues/15)) ([7cb83f0](https://github.com/mxmehl/just-book-my-cal/commit/7cb83f08fafa2b214af9db61c36f39d09e60cb98))
+* **deps:** lock file maintenance ([#18](https://github.com/mxmehl/just-book-my-cal/issues/18)) ([acbbf68](https://github.com/mxmehl/just-book-my-cal/commit/acbbf68c9f8b53d7fa3828d384da0e68d530ad27))
+* **deps:** lock file maintenance ([#20](https://github.com/mxmehl/just-book-my-cal/issues/20)) ([ca305ef](https://github.com/mxmehl/just-book-my-cal/commit/ca305ef9bbc8c818c0cc73730dbf3479850a0410))
+* **deps:** lock file maintenance ([#22](https://github.com/mxmehl/just-book-my-cal/issues/22)) ([e5d2809](https://github.com/mxmehl/just-book-my-cal/commit/e5d2809e990fdc1ef0cf4b7d2c35208b32013bea))
+* **deps:** update astral-sh/setup-uv action to v10.3.1 ([#13](https://github.com/mxmehl/just-book-my-cal/issues/13)) ([399d52c](https://github.com/mxmehl/just-book-my-cal/commit/399d52cfaa35d5d7010c8fafe4a43674d7ec98f3))
+* **deps:** update astral-sh/setup-uv action to v10.3.3 ([#17](https://github.com/mxmehl/just-book-my-cal/issues/17)) ([1bddfec](https://github.com/mxmehl/just-book-my-cal/commit/1bddfec548976e04c2344043637bec85d6a607f6))
+* **deps:** update github actions group ([#14](https://github.com/mxmehl/just-book-my-cal/issues/14)) ([a495665](https://github.com/mxmehl/just-book-my-cal/commit/a4956653223cfb6e92f01ace25629e48ad60ff32))
+* **deps:** update pypa/gh-action-pypi-publish action to v1.14.3 ([#11](https://github.com/mxmehl/just-book-my-cal/issues/11)) ([c8378e2](https://github.com/mxmehl/just-book-my-cal/commit/c8378e2e76c3860f78a64a30fcc52ac454cd433f))
+* **deps:** update zizmorcore/zizmor-action action to v0.8.0 ([#16](https://github.com/mxmehl/just-book-my-cal/issues/16)) ([c890b79](https://github.com/mxmehl/just-book-my-cal/commit/c890b79ebe91d4a4c9b584194f0cfbf890f4e628))
+* **deps:** update zizmorcore/zizmor-action action to v0.8.1 ([#19](https://github.com/mxmehl/just-book-my-cal/issues/19)) ([18d9ccd](https://github.com/mxmehl/just-book-my-cal/commit/18d9ccdd60144f9a14d1ecf9231b962a074d3782))
+
 ## [0.2.0](https://github.com/mxmehl/just-book-my-cal/compare/v0.1.4...v0.2.0) (2026-10-20)
 
 
