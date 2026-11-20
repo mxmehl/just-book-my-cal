@@ -7,7 +7,7 @@
 
 Single-user booking page (a minimal self-hosted cal.com alternative): reads busy times from public ICS feeds, offers free slots under configured rules, books them in SQLite and sends ICS invitations. See [README.md](README.md).
 
-- **Stack:** Python 3.11–3.14, Flask, SQLAlchemy (SQLite), icalendar, recurring-ical-events, Jinja2
+- **Stack:** Python 3.11–3.15, Flask, SQLAlchemy (SQLite), icalendar, recurring-ical-events, Jinja2
 - **Package manager:** uv — always use `uv run` / `uv sync`; never `pip` directly
 - **Entry points** (do not rename): `justbookmycal-cli` (development server, DB commands), `justbookmycal` (gunicorn/WSGI)
 
